@@ -24,19 +24,11 @@ provider "helm" {
   }
 }
 
-data "aws_availability_zones" "available" {}
-
-data "aws_caller_identity" "current" {}
-
-
-data "aws_outposts_outpost" "shared" {
-  name = "SEA19.07"
-}
-
 locals {
   name   = "eks-outpost-tf"
   region = "us-west-2"
   cluster_version = "1.23"
+  outpost_name = "SEA19.07"
 
   vpc_cidr = "10.50.0.0/16"
   azs      = slice(data.aws_availability_zones.available.names, 0, 3)
@@ -45,6 +37,14 @@ locals {
     Blueprint  = local.name
     GithubRepo = "github.com/aws-ia/terraform-aws-eks-blueprints"
   }
+}
+
+data "aws_availability_zones" "available" {}
+
+data "aws_caller_identity" "current" {}
+
+data "aws_outposts_outpost" "shared" {
+  name = local.outpost_name
 }
 
 #---------------------------------------------------------------
@@ -85,12 +85,7 @@ module "eks_blueprints" {
 
       create_launch_template = true
       launch_template_os     = "bottlerocket"
-      pre_userdata         = ""
-      #pre_userdata         = <<-EOT
-      #      yum install -y amazon-ssm-agent \
-      #      systemctl enable amazon-ssm-agent && systemctl start amazon-ssm-agent \
-      #  EOT
-      post_userdata        = ""
+
       kubelet_extra_args   = ""
       bootstrap_extra_args = ""
 
@@ -212,7 +207,7 @@ data "aws_iam_policy_document" "ebs" {
       type = "AWS"
       identifiers = [
         "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling", # required for the ASG to manage encrypted volumes for nodes
-        module.eks_blueprints.module.aws_eks.iam_role_arn,                                                                                                            # required for the cluster / persistentvolume-controller to create encrypted PVCs
+        "arn:aws:iam::123456789:role/eks-outpost-tf-cluster-role",                                                                                                            # required for the cluster / persistentvolume-controller to create encrypted PVCs
       ]
     }
   }
@@ -226,7 +221,7 @@ data "aws_iam_policy_document" "ebs" {
       type = "AWS"
       identifiers = [
         "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling", # required for the ASG to manage encrypted volumes for nodes
-        module.eks_blueprints.module.aws_eks.iam_role_arn,                                                                                                            # required for the cluster / persistentvolume-controller to create encrypted PVCs
+        "arn:aws:iam::123456789:role/eks-outpost-tf-cluster-role",                                                                                                            # required for the cluster / persistentvolume-controller to create encrypted PVCs
       ]
     }
 
