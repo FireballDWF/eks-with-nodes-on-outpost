@@ -1,9 +1,6 @@
 provider "aws" {
-  region = local.region
+  region  = local.region
   profile = "outpost"
-  #assume_role {
-  #  role_arn = "arn:aws:iam::450360193046:role/eksworkshop-admin"
-  #}
 }
 
 data "aws_eks_cluster_auth" "cluster" {
@@ -25,10 +22,10 @@ provider "helm" {
 }
 
 locals {
-  name   = "eks-outpost-tf"
-  region = "us-west-2"
+  name            = "eks-outpost-tf"
+  region          = "us-west-2"
   cluster_version = "1.23"
-  outpost_name = "SEA19.07"
+  outpost_name    = "SEA19.07"
 
   vpc_cidr = "10.50.0.0/16"
   azs      = slice(data.aws_availability_zones.available.names, 0, 3)
@@ -60,50 +57,43 @@ module "eks_blueprints" {
   vpc_id             = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnets
 
-
-  managed_node_groups = {
-    mg_5 = {
-      node_group_name = "managed-ondemand"
-      instance_types  = ["m5.xlarge"]
-      min_size        = 2
-      subnet_ids      = module.vpc.private_subnets
-    }
-  }
+  #managed_node_groups = {
+  #  mg_5 = {
+  #    node_group_name = "managed-ondemand"
+  #    instance_types  = ["m5.xlarge"]
+  #    min_size        = 2
+  #    subnet_ids      = module.vpc.private_subnets
+  #  }
+  #}
 
   self_managed_node_groups = {
-    outpost = {
-      node_group_name    = "outpost-self-mng"
-      instance_type      = "m5.xlarge"
-      desired_capacity   = 2
-      min_size           = 2
-      max_size           = 3
+    self_outpost = {
+      node_group_name    = "self-mng-outpost"
       subnet_ids         = module.vpc.outpost_subnets
+      launch_template_os = "bottlerocket"
 
-      create_iam_role           = true
-      iam_role_arn              = aws_iam_role.self_managed_ng.arn
-      iam_instance_profile_name  = aws_iam_instance_profile.self_managed_ng.name
-
-      create_launch_template = true
-      launch_template_os     = "bottlerocket"
-
-      kubelet_extra_args   = ""
-      bootstrap_extra_args = ""
-
-      block_device_mappings = {
-        xvda = {
-          device_name = "/dev/xvda"
-          ebs = {
-            volume_size           = 50
-            volume_type           = "gp2"
-            iops                  = null
-            kms_key_id            = aws_kms_key.ebs.arn
-            encrypted             = true
-            delete_on_termination = true
-          }
-        } 
-      }
       enable_monitoring = true
-      public_ip         = false # Enable only for public subnets
+
+      instance_type    = "m5.xlarge"
+      desired_capacity = 3
+      min_size         = 2
+      max_size         = 5
+
+      block_device_mappings = [
+        {
+          device_name = "/dev/xvda"
+          volume_type = "gp2"
+          volume_size = 50
+          encrypted   = true
+        },
+        {
+          device_name = "/dev/xvdb"
+          volume_type = "gp2"
+          iops        = 3000
+          volume_size = 100
+          encrypted   = true
+        }
+      ]
     }
   }
 
@@ -113,10 +103,10 @@ module "eks_blueprints" {
 module "eks_blueprints_kubernetes_addons" {
   source = "github.com/aws-ia/terraform-aws-eks-blueprints/modules/kubernetes-addons"
 
-  eks_cluster_id       = module.eks_blueprints.eks_cluster_id
-  eks_cluster_endpoint = module.eks_blueprints.eks_cluster_endpoint
-  eks_oidc_provider    = module.eks_blueprints.oidc_provider
-  eks_cluster_version  = module.eks_blueprints.eks_cluster_version
+  eks_cluster_id           = module.eks_blueprints.eks_cluster_id
+  eks_cluster_endpoint     = module.eks_blueprints.eks_cluster_endpoint
+  eks_oidc_provider        = module.eks_blueprints.oidc_provider
+  eks_cluster_version      = module.eks_blueprints.eks_cluster_version
   auto_scaling_group_names = module.eks_blueprints.self_managed_node_group_autoscaling_groups
 
   # EKS Managed Add-ons
@@ -125,112 +115,6 @@ module "eks_blueprints_kubernetes_addons" {
   enable_amazon_eks_kube_proxy = true
 
   tags = local.tags
-}
-
-#---------------------------------------------------------------
-# Custom IAM role for Self Managed Node Group
-#---------------------------------------------------------------
-data "aws_iam_policy_document" "self_managed_ng_assume_role_policy" {
-  statement {
-    sid = "EKSWorkerAssumeRole"
-
-    actions = [
-      "sts:AssumeRole",
-    ]
-    principals {
-      type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
-    }
-  }
-}
-
-resource "aws_iam_role" "self_managed_ng" {
-  name                  = "self-managed-node-role"
-  description           = "EKS Managed Node group IAM Role"
-  assume_role_policy    = data.aws_iam_policy_document.self_managed_ng_assume_role_policy.json
-  path                  = "/"
-  force_detach_policies = true
-  managed_policy_arns = [
-    "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
-    "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy",
-    "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
-    "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-  ]
-
-  tags = local.tags
-}
-
-resource "aws_iam_instance_profile" "self_managed_ng" {
-  name = "self-managed-node-instance-profile"
-  role = aws_iam_role.self_managed_ng.name
-  path = "/"
-
-  lifecycle {
-    create_before_destroy = true
-  }
-
-  tags = local.tags
-}
-
-resource "aws_kms_key" "ebs" {
-  description             = "Customer managed key to encrypt self managed node group volumes"
-  deletion_window_in_days = 7
-  policy                  = data.aws_iam_policy_document.ebs.json
-}
-
-data "aws_iam_policy_document" "ebs" {
-  # Copy of default KMS policy that lets you manage it
-  statement {
-    sid       = "Enable IAM User Permissions"
-    actions   = ["kms:*"]
-    resources = ["*"]
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-    }
-  }
-
-  # Required for EKS
-  statement {
-    sid = "Allow service-linked role use of the CMK"
-    actions = [
-      "kms:Encrypt",
-      "kms:Decrypt",
-      "kms:ReEncrypt*",
-      "kms:GenerateDataKey*",
-      "kms:DescribeKey"
-    ]
-    resources = ["*"]
-
-    principals {
-      type = "AWS"
-      identifiers = [
-        "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling", # required for the ASG to manage encrypted volumes for nodes
-        "arn:aws:iam::123456789:role/eks-outpost-tf-cluster-role",                                                                                                            # required for the cluster / persistentvolume-controller to create encrypted PVCs
-      ]
-    }
-  }
-
-  statement {
-    sid       = "Allow attachment of persistent resources"
-    actions   = ["kms:CreateGrant"]
-    resources = ["*"]
-
-    principals {
-      type = "AWS"
-      identifiers = [
-        "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling", # required for the ASG to manage encrypted volumes for nodes
-        "arn:aws:iam::123456789:role/eks-outpost-tf-cluster-role",                                                                                                            # required for the cluster / persistentvolume-controller to create encrypted PVCs
-      ]
-    }
-
-    condition {
-      test     = "Bool"
-      variable = "kms:GrantIsForAWSResource"
-      values   = ["true"]
-    }
-  }
 }
 
 #---------------------------------------------------------------
@@ -272,10 +156,10 @@ module "vpc" {
   private_subnet_tags = {
     "kubernetes.io/role/internal-elb" = 1
   }
-  
+
   outpost_subnet_tags = {
     "kubernetes.io/role/internal-elb" = 1
   }
-  
+
   tags = local.tags
 }
