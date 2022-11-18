@@ -3,10 +3,6 @@ provider "aws" {
   profile = "outpost"
 }
 
-data "aws_eks_cluster_auth" "cluster" {
-  name = module.eks_blueprints.eks_cluster_id
-}
-
 provider "kubernetes" {
   host                   = module.eks_blueprints.eks_cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks_blueprints.eks_cluster_certificate_authority_data)
@@ -21,11 +17,22 @@ provider "helm" {
   }
 }
 
+data "aws_availability_zones" "available" {}
+
+data "aws_caller_identity" "current" {}
+
+data "aws_eks_cluster_auth" "cluster" {
+  name = module.eks_blueprints.eks_cluster_id
+}
+
+data "aws_outposts_outpost" "shared" {
+  name = "SEA19.07"
+}
+
 locals {
   name            = "eks-outpost-tf"
   region          = "us-west-2"
   cluster_version = "1.23"
-  outpost_name    = "SEA19.07"
 
   vpc_cidr = "10.50.0.0/16"
   azs      = slice(data.aws_availability_zones.available.names, 0, 3)
@@ -34,14 +41,6 @@ locals {
     Blueprint  = local.name
     GithubRepo = "github.com/aws-ia/terraform-aws-eks-blueprints"
   }
-}
-
-data "aws_availability_zones" "available" {}
-
-data "aws_caller_identity" "current" {}
-
-data "aws_outposts_outpost" "shared" {
-  name = local.outpost_name
 }
 
 #---------------------------------------------------------------
@@ -57,14 +56,6 @@ module "eks_blueprints" {
   vpc_id             = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnets
 
-  #managed_node_groups = {
-  #  mg_5 = {
-  #    node_group_name = "managed-ondemand"
-  #    instance_types  = ["m5.xlarge"]
-  #    min_size        = 2
-  #    subnet_ids      = module.vpc.private_subnets
-  #  }
-  #}
 
   self_managed_node_groups = {
     self_outpost = {
@@ -83,15 +74,7 @@ module "eks_blueprints" {
         {
           device_name = "/dev/xvda"
           volume_type = "gp2"
-          volume_size = 50
-          encrypted   = true
-        },
-        {
-          device_name = "/dev/xvdb"
-          volume_type = "gp2"
-          iops        = 3000
           volume_size = 100
-          encrypted   = true
         }
       ]
     }
@@ -110,9 +93,13 @@ module "eks_blueprints_kubernetes_addons" {
   auto_scaling_group_names = module.eks_blueprints.self_managed_node_group_autoscaling_groups
 
   # EKS Managed Add-ons
-  enable_amazon_eks_vpc_cni    = true
-  enable_amazon_eks_coredns    = true
-  enable_amazon_eks_kube_proxy = true
+  enable_amazon_eks_vpc_cni            = true
+  enable_amazon_eks_coredns            = true
+  enable_amazon_eks_kube_proxy         = true
+  enable_amazon_eks_aws_ebs_csi_driver = true
+  enable_metrics_server                = true
+  enable_aws_load_balancer_controller  = true
+
 
   tags = local.tags
 }
