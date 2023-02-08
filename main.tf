@@ -1,6 +1,5 @@
 provider "aws" {
   region  = local.region
-  profile = "outpost"
 }
 
 provider "kubernetes" {
@@ -26,18 +25,19 @@ data "aws_eks_cluster_auth" "cluster" {
 }
 
 data "aws_outposts_outpost" "shared" {
-  name = "SEA19.07"
+  name = "[Scout02 28 06292022]"
 }
 
 locals {
-  name            = "eks-outpost-tf"
+  name            = "filiatra-eks-outpost-tf"
   region          = "us-west-2"
-  cluster_version = "1.23"
+  cluster_version = "1.24"
 
   vpc_cidr = "10.50.0.0/16"
   azs      = slice(data.aws_availability_zones.available.names, 0, 3)
 
   tags = {
+    Owner = "filiatra@amazon.com"
     Blueprint  = local.name
     GithubRepo = "github.com/aws-ia/terraform-aws-eks-blueprints"
   }
@@ -61,22 +61,22 @@ module "eks_blueprints" {
     self_outpost = {
       node_group_name    = "self-mng-outpost"
       subnet_ids         = module.vpc.outpost_subnets
-      launch_template_os = "bottlerocket"
+      launch_template_os = "amazonlinux2eks"
 
       enable_monitoring = true
 
-      instance_type    = "m5.xlarge"
+      instance_type    = "c6id.4xlarge"
       desired_capacity = 3
       min_size         = 2
       max_size         = 5
 
-      block_device_mappings = [
-        {
-          device_name = "/dev/xvda"
-          volume_type = "gp2"
-          volume_size = 100
-        }
-      ]
+      #block_device_mappings = [
+      #  {
+      #    device_name = "/dev/xvda"
+      #    volume_type = "gp2"
+      #    volume_size = 100
+      #  }
+      #]
     }
   }
 
@@ -96,9 +96,9 @@ module "eks_blueprints_kubernetes_addons" {
   enable_amazon_eks_vpc_cni            = true
   enable_amazon_eks_coredns            = true
   enable_amazon_eks_kube_proxy         = true
-  enable_amazon_eks_aws_ebs_csi_driver = true
+  #enable_amazon_eks_aws_ebs_csi_driver = true
   enable_metrics_server                = true
-  enable_aws_load_balancer_controller  = true
+  #enable_aws_load_balancer_controller  = true
 
 
   tags = local.tags
