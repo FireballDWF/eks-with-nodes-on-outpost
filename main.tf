@@ -65,6 +65,7 @@ module "eks_blueprints" {
 
       enable_monitoring = true
 
+      custom_ami_id    = "ami-094a7f9c1df01b2c3"
       instance_type    = "c6id.4xlarge"
       desired_capacity = 3
       min_size         = 2
