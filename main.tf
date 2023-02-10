@@ -55,7 +55,7 @@ module "eks_blueprints" {
 
   vpc_id             = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnets
-
+  cluster_endpoint_private_access = true
 
   self_managed_node_groups = {
     self_outpost = {
@@ -98,7 +98,7 @@ module "eks_blueprints_kubernetes_addons" {
   enable_amazon_eks_kube_proxy         = true
   #enable_amazon_eks_aws_ebs_csi_driver = true
   enable_metrics_server                = true
-  #enable_aws_load_balancer_controller  = true
+  enable_aws_load_balancer_controller  = true
 
 
   tags = local.tags
