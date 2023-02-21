@@ -8,6 +8,10 @@ EKS on Outposts currently is only *supported* on the Racks form factor, thus run
 
 2. Nodes in your Node Groups are subject to the same AMI limitations referenced above, thus can't use Bottlerocket or any other AMI composed of more than 1 snapshot.  This example currently uses an EKS-Optimized AmazonLinux2 AMI
 
+3. The subnets created on the Outposts Server leveraging terraform do not yet automatically configure the subnets to support the [LNI feature of Servers](https://docs.aws.amazon.com/outposts/latest/server-userguide/local-network-interface.html).  The missing step is documented at [Enable local network interfaces of Outpost subnets](https://docs.aws.amazon.com/outposts/latest/server-userguide/local-network-interface.html#enable-lni).  A future enhancement to this repo may leverage a "local-exec" provisioner to execute the referenced awscli modify-subnet-attribute command.
+
+4. The nodes created do not yet have LNI's created/attached. Will need to refactor to create nodes via the module terraform-aws-eks, and following the example for customizing network_interfaces as seen in https://github.com/terraform-aws-modules/terraform-aws-eks/blob/v19.10.0/examples/self_managed_node_group/main.tf#L163 
+
 ## (Very Limited) Testing
 
 1. Have not tested clusters running an actual workload.
