@@ -14,6 +14,6 @@ EKS on Outposts currently is only *supported* on the Racks form factor, thus run
 
 ## (Very Limited) Testing
 
-1. Have not tested clusters running an actual workload.
+1. Have not tested clusters running an actual workload.  Might adapt https://devopslearning.medium.com/metallb-load-balancer-for-bare-metal-kubernetes-43686aa0724f
 1. Have not tested exposing a workload via the [LNI](https://docs.aws.amazon.com/outposts/latest/server-userguide/local-network-interface.html) using a Load Balancer such as [MetalLB in Layer 2 (Gratuitous ARP) mode](https://metallb.universe.tf/concepts/layer2/)
 1. Testing conducted by repo owner has only been done on a single Outposts Server.  Thus have NOT attempted to configure nor test getting nodes to talk to each other via the [LNI](https://docs.aws.amazon.com/outposts/latest/server-userguide/local-network-interface.html) of the Server. 
