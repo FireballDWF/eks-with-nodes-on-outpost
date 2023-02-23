@@ -69,23 +69,27 @@ module "eks" {
       desired_size  = 1
       instance_type = local.instance_type
       enable_monitoring = true
-      launch_template_os = "amazonlinux2eks"
+  
       subnet_ids         = module.vpc.outpost_subnets
-      #custom_ami_id    = "ami-0b0af3577fe5e3532" #RHEL 8.4 # al2 "ami-094a7f9c1df01b2c3"
-      # must align with device-name in ami
-      # for RHEL, use /dev/sda1
-      #block_device_mappings = [
-      #  {
-      #    device_name = "/dev/sda1"
-      #    volume_type = "gp2"
-      #    volume_size = 20
-      #  }
-      #]
-      # currently not using LocalClusters, so following is commented out
-      # Additional information is required to join local clusters to EKS
+
+
+      launch_template_name            = "self-managed-ex-outposts-servers-v2"
+      launch_template_use_name_prefix = true
+      launch_template_description     = "Self managed node group example for outposts servers launch template"
+
+      ami_id    = "ami-0a1c44441afe98327" #RHEL 8.4 # al2 "ami-094a7f9c1df01b2c3"
+ 
       bootstrap_extra_args = <<-EOT
         --container-runtime containerd 
       EOT
+      timeouts = {
+        create = "80m"
+        update = "80m"
+        delete = "80m"
+      }    
+      tags = {
+        ExtraTag = "Self managed node group for Outposts Servers Extended Clusters"
+      }     
     }
 
   }
@@ -191,5 +195,13 @@ module "vpc" {
     "kubernetes.io/role/internal-elb" = 1
   }
 
+
   tags = local.tags
+}
+
+# Required for Outposts Servers to enable LNI behavior per https://docs.aws.amazon.com/outposts/latest/server-userguide/local-network-interface.html#enable-lni
+resource "null_resource" "outpost_server_subets" {
+  provisioner "local-exec" {
+    command = "aws ec2 modify-subnet-attribute --subnet-id ${module.vpc.outpost_subnets[0]} --enable-lni-at-device-index 1 && aws ec2 modify-subnet-attribute --subnet-id ${module.vpc.outpost_subnets[1]} --enable-lni-at-device-index 1"
+  }
 }
