@@ -8,11 +8,9 @@ EKS on Outposts currently is only *supported* on the Racks form factor, thus run
 
 2. Nodes in your Node Groups are subject to the same AMI limitations referenced above, thus can't use Bottlerocket or any other AMI composed of more than 1 snapshot.  This example currently uses an EKS-Optimized AmazonLinux2 AMI
 
-3. The nodes created do not yet have LNI's created/attached. Will need to refactor to create nodes via the module terraform-aws-eks such as seen in https://gitlab.aws.dev/osmed/london_demo/-/blob/main/main.tf#L120 and following the example for customizing network_interfaces as seen in https://github.com/terraform-aws-modules/terraform-aws-eks/blob/v19.10.0/examples/self_managed_node_group/main.tf#L163 
-
 ## (Very Limited) Testing
 
 1. Have not tested clusters running an actual workload.  Might adapt https://devopslearning.medium.com/metallb-load-balancer-for-bare-metal-kubernetes-43686aa0724f
 1. Have not tested exposing a workload via the [LNI](https://docs.aws.amazon.com/outposts/latest/server-userguide/local-network-interface.html) using a Load Balancer such as [MetalLB in Layer 2 (Gratuitous ARP) mode](https://metallb.universe.tf/concepts/layer2/)
 1. Testing conducted by repo owner has only been done on a single Outposts Server.  Thus have NOT attempted to configure nor test getting nodes to talk to each other via the [LNI](https://docs.aws.amazon.com/outposts/latest/server-userguide/local-network-interface.html) of the Server. 
-
+1. Test if SSM-Agent working with AL2 and RHEL

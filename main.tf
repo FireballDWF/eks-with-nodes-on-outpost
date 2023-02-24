@@ -64,24 +64,39 @@ module "eks" {
     outpost = {
       name = local.name
 
-      min_size      = 1
+      min_size      = 2
       max_size      = 5
-      desired_size  = 1
+      desired_size  = 2
       instance_type = local.instance_type
       enable_monitoring = true
   
       subnet_ids         = module.vpc.outpost_subnets
 
-
       launch_template_name            = "self-managed-ex-outposts-servers-v2"
       launch_template_use_name_prefix = true
       launch_template_description     = "Self managed node group example for outposts servers launch template"
 
-      ami_id    = "ami-0a1c44441afe98327" #RHEL 8.4 # al2 "ami-094a7f9c1df01b2c3"
+      #ami_id    = "ami-0a1c44441afe98327" #RHEL 8.4 # al2 "ami-094a7f9c1df01b2c3"
  
-      bootstrap_extra_args = <<-EOT
-        --container-runtime containerd 
-      EOT
+      #bootstrap_extra_args = <<-EOT
+      #  --container-runtime containerd 
+      #EOT
+
+      network_interfaces = [
+        {
+          description                 = "ENI interface example"
+          delete_on_termination       = true
+          device_index                = 0
+          associate_public_ip_address = false
+        },
+        {
+          description                 = "LNI interface example"
+          delete_on_termination       = true
+          device_index                = 1
+          associate_public_ip_address = false
+        }
+      ]
+      
       timeouts = {
         create = "80m"
         update = "80m"
@@ -133,9 +148,11 @@ module "eks" {
 
   # Self Managed Node Group(s)
   self_managed_node_group_defaults = {
-  #  iam_role_additional_policies = {
+    update_launch_template_default_version = true
+    iam_role_additional_policies = {
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"  
   #    additional = data.aws_iam_policy.AWSLoadBalancerControllerIAMPolicy.arn
-  #  }
+    }
     autoscaling_group_tags = {
       "k8s.io/cluster-autoscaler/enabled" : true,
       "k8s.io/cluster-autoscaler/${local.name}" : "owned",
