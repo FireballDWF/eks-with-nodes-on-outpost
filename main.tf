@@ -82,18 +82,22 @@ module "eks" {
       #  --container-runtime containerd 
       #EOT
 
+      #TODO: Extra USERDATA to run 
+
       network_interfaces = [
         {
           description                 = "ENI interface example"
           delete_on_termination       = true
           device_index                = 0
           associate_public_ip_address = false
+          #source_dest_check           = false # Have not tested if makes a difference
         },
         {
           description                 = "LNI interface example"
           delete_on_termination       = true
           device_index                = 1
           associate_public_ip_address = false
+          #source_dest_check           = false  # Have not tested if makes a difference
         }
       ]
       
@@ -150,7 +154,8 @@ module "eks" {
   self_managed_node_group_defaults = {
     update_launch_template_default_version = true
     iam_role_additional_policies = {
-      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"  
+      AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",  
+      CloudWatchAgentServerPolicy  = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
   #    additional = data.aws_iam_policy.AWSLoadBalancerControllerIAMPolicy.arn
     }
     autoscaling_group_tags = {
@@ -174,7 +179,7 @@ module "eks" {
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 3.0"
+  version = ">= 3.19.0"
 
   name = local.name
   cidr = local.vpc_cidr
