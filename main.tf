@@ -82,7 +82,33 @@ module "eks" {
       #  --container-runtime containerd 
       #EOT
 
-      #TODO: Extra USERDATA to run 
+      #pre_bootstrap_user_data = <<-EOT
+
+      #EOT
+
+      post_bootstrap_user_data = <<-EOT
+      /bin/yum install -y amazon-cloudwatch-agent
+      /bin/curl https://ams-configuration-artifacts-us-west-2.s3.us-west-2.amazonaws.com/configurations/cloudwatch/latest/linux-cloudwatch-config.json -o /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d/ams-accelerate-config.json
+      /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d/ams-accelerate-config.json
+      /sbin/dhclient -r -lf /var/lib/dhclient/dhclient--eth1.lease -pf /var/run/dhclient-eth1.pid eth1
+      /usr/sbin/ifconfig eth1 down
+      /sbin/ip addr flush eth1
+      cat <<-EOF > /etc/sysconfig/network-scripts/ifcfg-eth1
+      DEVICE=eth1
+      TYPE=ETHERNET
+      ONBOOT=yes
+      BOOTPROTO=dhcp
+      DEFROUTE=no
+      IPV4_FAILURE_FATAL=no
+      IPV6INIT=no
+      NM_CONTROLLED=no
+      PEERDNS=no
+      EC2SYNC=no
+      EOF
+      /sbin/ifup eth1
+      /sbin/iptables -t nat -I POSTROUTING -j RETURN -d 192.168.0.0/22
+      EOT
+      # TODO: for reuse CIDR block in above iptables line needs to be dynamically looked up (or parameterized)
 
       network_interfaces = [
         {

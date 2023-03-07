@@ -15,18 +15,13 @@ EKS on Outposts currently is only *supported* on the Racks form factor, thus run
     1.24: 
         kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.13.9/config/manifests/metallb-native.yaml
             installs with no errors
+    1.25: testing now
 1. Testing conducted by repo owner has only been done on a single Outposts Server.  Thus have NOT attempted to configure nor test getting nodes of different servers to talk to each other via the [LNI](https://docs.aws.amazon.com/outposts/latest/server-userguide/local-network-interface.html) of the Server. 
 1. Session Manager works with AL2's EKS optimized AMI.  Have not attempted to test on RHEL 8.4+ yet.
 
 ## Current issues:
-1. eth1 LNI changes to use DHCP from local network don't survive reboot - lower priority sysadmin level fix
+1. eth1 LNI changes to use DHCP from local network don't survive reboot - lower priority sysadmin level fix: needs to be retested
 2. Traffic thru LNI interfaces getting dropped at receiver (tcpdump shows traffic (ping and http:80) arriving but no reply by receiver) Can't connect between instances on same server via LNI: Priority: Showstopper.  Next step: test where sender is an instance that is not an EKS worker node.
+    sudo iptables -t nat -I POSTROUTING -j RETURN -d 192.168.0.0/22
+    needs to be retested after above change
 
-## TODOs:
-1. Automate via USERDATA my manual updates to LNI networking - Medium
-2. Automate current manual install of Cloudwatch Agent 
-```
-sudo yum install -y amazon-cloudwatch-agent
-sudo curl https://ams-configuration-artifacts-us-west-2.s3.us-west-2.amazonaws.com/configurations/cloudwatch/latest/linux-cloudwatch-config.json -o /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d/ams-accelerate-config.json
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d/file_ams-accelerate-config.json
-```
