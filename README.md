@@ -10,12 +10,12 @@ EKS on Outposts currently is only *supported* on the Racks form factor, thus run
 
 ## (Very Limited) Testing
 
-1. Deployed an nginx workload with MetalLB using the https://devopslearning.medium.com/metallb-load-balancer-for-bare-metal-kubernetes-43686aa0724f as the guide for nginx but not for MetalLB 
-1. Exposing a workload via the [LNI](https://docs.aws.amazon.com/outposts/latest/server-userguide/local-network-interface.html) using a Load Balancer such as [MetalLB in Layer 2 (Gratuitous ARP) mode](https://metallb.universe.tf/concepts/layer2/).  First testing with EKS 1.24 (as 1.25 eliminates PodSecurityPolicy and the Medium post above uses a config which is using PodSecurityPolicy.  Still need to test if laest version of MetalLB work with the 1.25 version of EKS)
+1. Deployed an nginx workload with MetalLB using the https://devopslearning.medium.com/metallb-load-balancer-for-bare-metal-kubernetes-43686aa0724f as the guide for nginx but not for MetalLB.  This was done manually, not in my code repo (yet, TODO) 
+1. Exposing a workload via the [LNI](https://docs.aws.amazon.com/outposts/latest/server-userguide/local-network-interface.html) using a Load Balancer such as [MetalLB in Layer 2 (Gratuitous ARP) mode](https://metallb.universe.tf/concepts/layer2/). 
     1.24: 
         kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.13.9/config/manifests/metallb-native.yaml
             installs with no errors
-    1.25: testing now
+    1.25: working
 1. Testing conducted by repo owner has only been done on a single Outposts Server.  Thus have NOT attempted to configure nor test getting nodes of different servers to talk to each other via the [LNI](https://docs.aws.amazon.com/outposts/latest/server-userguide/local-network-interface.html) of the Server. 
 1. Session Manager works with AL2's EKS optimized AMI.  Have not attempted to test on RHEL 8.4+ yet.
 
@@ -32,7 +32,7 @@ High Priority:
 ## Identified tests not executed yet
 
 Low:
-1. recreate EKS 1.25 from scratch, current test is from a 1.24 to 1.25 upgrade
+1. recreate EKS 1.25 from scratch, current test is from a 1.24 to 1.25 upgrade.  Confirm metallb still works.
 
 Medium:
 2. redo config for custom EKS for RHEL 8.7 AMI for EKS 1.24 since need to get into distro specific network setup.
