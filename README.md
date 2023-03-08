@@ -20,10 +20,26 @@ EKS on Outposts currently is only *supported* on the Racks form factor, thus run
 1. Session Manager works with AL2's EKS optimized AMI.  Have not attempted to test on RHEL 8.4+ yet.
 
 ## Current issues:
+
+Low Priority:
 1. eth1 LNI changes to use DHCP from local network don't survive reboot - lower priority sysadmin level fix. 
+1.1. EKS will even call ec2:DetachNetworkInterface on an LNI (for reasons currently unknown)
 2. Will need ability to run cloud-init from userdata, or to write scripts which get executed when required like for partition. Asked Oscar M for examples
 
-## Identified tests not executed yet
-1. retest change for LNI configs to survive reboot
+High Priority:
 1. curl -v http://192.168.2.169:80 from node which is not the current metallb speaker.  Expect need to setup the multus cni per quip doc
+
+## Identified tests not executed yet
+
+Low:
+1. recreate EKS 1.25 from scratch, current test is from a 1.24 to 1.25 upgrade
+
+Medium:
 2. redo config for custom EKS for RHEL 8.7 AMI for EKS 1.24 since need to get into distro specific network setup.
+
+## Successful tests
+1. Console 
+1.1. Nodes Health in ASG
+1.2. Nodes register in cluster 
+2. cli
+1.1. kubectl get nodes -o wide
