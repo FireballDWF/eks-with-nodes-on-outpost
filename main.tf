@@ -90,9 +90,6 @@ module "eks" {
       /bin/yum install -y amazon-cloudwatch-agent
       /bin/curl https://ams-configuration-artifacts-us-west-2.s3.us-west-2.amazonaws.com/configurations/cloudwatch/latest/linux-cloudwatch-config.json -o /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d/ams-accelerate-config.json
       /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d/ams-accelerate-config.json
-      /sbin/dhclient -r -lf /var/lib/dhclient/dhclient--eth1.lease -pf /var/run/dhclient-eth1.pid eth1
-      /usr/sbin/ifconfig eth1 down
-      /sbin/ip addr flush eth1
       cat <<-EOF > /etc/sysconfig/network-scripts/ifcfg-eth1
       DEVICE=eth1
       TYPE=ETHERNET
@@ -105,8 +102,15 @@ module "eks" {
       PEERDNS=no
       EC2SYNC=no
       EOF
+      cat <<-EOF > /var/lib/cloud/scripts/per-boot/lni-setup.sh
+      /sbin/dhclient -r -lf /var/lib/dhclient/dhclient--eth1.lease -pf /var/run/dhclient-eth1.pid eth1
+      /usr/sbin/ifconfig eth1 down
+      /sbin/ip addr flush eth1
       /sbin/ifup eth1
       /sbin/iptables -t nat -I POSTROUTING -j RETURN -d 192.168.0.0/22
+      EOF
+      chmod +x /var/lib/cloud/scripts/per-boot/lni-setup.sh
+      /var/lib/cloud/scripts/per-boot/lni-setup.sh
       EOT
       # TODO: for reuse CIDR block in above iptables line needs to be dynamically looked up (or parameterized)
 
@@ -248,7 +252,7 @@ module "vpc" {
 }
 
 # Required for Outposts Servers to enable LNI behavior per https://docs.aws.amazon.com/outposts/latest/server-userguide/local-network-interface.html#enable-lni
-resource "null_resource" "outpost_server_subets" {
+resource "null_resource" "outpost_server_subnets" {
   provisioner "local-exec" {
     command = "aws ec2 modify-subnet-attribute --subnet-id ${module.vpc.outpost_subnets[0]} --enable-lni-at-device-index 1 && aws ec2 modify-subnet-attribute --subnet-id ${module.vpc.outpost_subnets[1]} --enable-lni-at-device-index 1"
   }
