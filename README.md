@@ -23,8 +23,9 @@ Low Priority:
 3. parameterize eth1, 192.168.x.x, and other hardcoded values
 
 High Priority:
-1. curl -v http://192.168.2.169:80 from node which is not the current metallb speaker.  Expect need to setup the multus cni per quip doc
+1. curl -v http://192.168.2.169:80 from device other than the Outposts Server it's running on.  Expect need to setup the multus cni per quip doc
 1.1. Consult https://docs.aws.amazon.com/eks/latest/userguide/pod-multiple-network-interfaces.html and https://github.com/aws-samples/eks-install-guide-for-multus as needed
+
 
 ## Identified tests not executed yet
 Low:
@@ -40,3 +41,4 @@ Medium:
 2. cli
 1.1. kubectl get nodes -o wide
 1.2. kubectl get services   
+1.3. curl -v http://192.168.2.169:80 from both worker nodes.
