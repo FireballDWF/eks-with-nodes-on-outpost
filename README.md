@@ -36,8 +36,10 @@ Medium:
 ## Successful tests
 
 1. Console 
+
   1.1. Nodes Health in ASG
   1.2. Nodes register in cluster 
+
 2. cli
   2.1. kubectl get nodes -o wide
   2.2. kubectl get services   
