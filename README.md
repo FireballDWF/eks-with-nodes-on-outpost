@@ -17,24 +17,24 @@ EKS on Outposts currently is only *supported* on the Racks form factor, thus run
 
 ## Current issues:
 
-Low Priority:
-1. as lni created from within userdata, need a lambda or some other method to cleanup these interfaces when instances they are attached to are terminated
-2. Will need ability to run cloud-init from userdata, or to write scripts which get executed when required like for partition. Asked Oscar M for examples
-3. parameterize eth1, 192.168.x.x, and other hardcoded values
-
 High Priority:
 1. curl -v http://192.168.2.169:80 from device other than the Outposts Server it's running on.  Expect need to setup the multus cni per quip doc
 1.1. Consult https://docs.aws.amazon.com/eks/latest/userguide/pod-multiple-network-interfaces.html and https://github.com/aws-samples/eks-install-guide-for-multus as needed
 
+Low Priority:
+1. as lni created from within userdata, need a lambda or some other method to cleanup these interfaces when instances they are attached to are terminated
+2. Will need ability to run cloud-init from userdata, or to write scripts which get executed when required like for partition. Asked Oscar M for examples
+3. parameterize eth1, 192.168.x.x, and other hardcoded values
 
 ## Identified tests not executed yet
 Low:
 1. TBD
 
 Medium:
-2. redo config for custom EKS for RHEL 8.7 AMI for EKS 1.24 since need to get into distro specific network setup.
+1. redo config for custom EKS for RHEL 8.7 AMI for EKS 1.24 since need to get into distro specific network setup.
 
 ## Successful tests
+
 1. Console 
 1.1. Nodes Health in ASG
 1.2. Nodes register in cluster 
