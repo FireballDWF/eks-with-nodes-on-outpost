@@ -70,8 +70,6 @@ module "eks" {
       instance_type = local.instance_type
       enable_monitoring = true
   
-      subnet_ids         = module.vpc.outpost_subnets
-
       launch_template_name            = "self-managed-ex-outposts-servers-v2"
       launch_template_use_name_prefix = true
       launch_template_description     = "Self managed node group example for outposts servers launch template"
@@ -102,6 +100,8 @@ module "eks" {
       PEERDNS=no
       EC2SYNC=no
       EOF
+      aws ec2 create-network-interface --description "LNI" --subnet-id ${module.vpc.outpost_subnets[0]} --tag-specifications ResourceType=network-interface,Tags=[{"node.k8s.amazonaws.com/no_manage"="true"}]
+      # TODO Insert aws ec2 attach-network-interface  --device-index 1
       cat <<-EOF > /var/lib/cloud/scripts/per-boot/lni-setup.sh
       /sbin/dhclient -r -lf /var/lib/dhclient/dhclient--eth1.lease -pf /var/run/dhclient-eth1.pid eth1
       /usr/sbin/ifconfig eth1 down
@@ -116,18 +116,11 @@ module "eks" {
 
       network_interfaces = [
         {
-          description                 = "ENI interface example"
+          description                 = "ENI"
           delete_on_termination       = true
           device_index                = 0
           associate_public_ip_address = false
-          #source_dest_check           = false # Have not tested if makes a difference
-        },
-        {
-          description                 = "LNI interface example"
-          delete_on_termination       = true
-          device_index                = 1
-          associate_public_ip_address = false
-          #source_dest_check           = false  # Have not tested if makes a difference
+          subnet_id                   = module.vpc.outpost_subnets[0]
         }
       ]
       
@@ -152,15 +145,7 @@ module "eks" {
   ]
 
  cluster_addons = {
-    #coredns = {
-    #  preserve    = true
-    #  most_recent = true
 
-    #  timeouts = {
-    #    create = "25m"
-    #    delete = "10m"
-    #  }
-    #}
     kube-proxy = {
       most_recent = true
     }
@@ -178,6 +163,7 @@ module "eks" {
       type        = "ingress"
       cidr_blocks = [local.vpc_cidr]
     }
+    # TODO Allow ICMP0
   }
 
   # Self Managed Node Group(s)
@@ -219,7 +205,7 @@ module "vpc" {
   private_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 10)]
 
   # Outpost is using single AZ specified in `outpost_az`
-  outpost_subnets = ["10.50.80.0/24", "10.50.90.0/24"]
+  outpost_subnets = ["10.50.80.0/24"] #, "10.50.90.0/24"]
   outpost_arn     = data.aws_outposts_outpost.shared.arn
   outpost_az      = data.aws_outposts_outpost.shared.availability_zone
 
@@ -235,18 +221,24 @@ module "vpc" {
   manage_default_security_group = true
   default_security_group_tags   = { Name = "${local.name}-default" }
 
+  enable_flow_log                      = true
+  create_flow_log_cloudwatch_iam_role  = true
+  create_flow_log_cloudwatch_log_group = true
+  
   public_subnet_tags = {
     "kubernetes.io/role/elb" = 1
+    "kubernetes.io/cluster/${local.name}" = "shared"
   }
 
   private_subnet_tags = {
     "kubernetes.io/role/internal-elb" = 1
+    "kubernetes.io/cluster/${local.name}" = "shared"
   }
 
   outpost_subnet_tags = {
     "kubernetes.io/role/internal-elb" = 1
+    "kubernetes.io/cluster/${local.name}" = "shared"
   }
-
 
   tags = local.tags
 }
@@ -254,6 +246,6 @@ module "vpc" {
 # Required for Outposts Servers to enable LNI behavior per https://docs.aws.amazon.com/outposts/latest/server-userguide/local-network-interface.html#enable-lni
 resource "null_resource" "outpost_server_subnets" {
   provisioner "local-exec" {
-    command = "aws ec2 modify-subnet-attribute --subnet-id ${module.vpc.outpost_subnets[0]} --enable-lni-at-device-index 1 && aws ec2 modify-subnet-attribute --subnet-id ${module.vpc.outpost_subnets[1]} --enable-lni-at-device-index 1"
+    command = "aws ec2 modify-subnet-attribute --subnet-id ${module.vpc.outpost_subnets[0]} --enable-lni-at-device-index 1"
   }
 }

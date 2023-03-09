@@ -5,7 +5,7 @@ locals {
   instance_type   = "c6id.4xlarge"
   outposts_name   = "[Scout02 28 06292022]" 
   vpc_cidr        = "10.50.0.0/16"
-  azs             = slice(data.aws_availability_zones.available.names, 0, 3)
+  azs             = [data.aws_outposts_outpost.shared.availability_zone, "us-west-2a"] #slice(data.aws_availability_zones.available.names, 0, 3)
 
   tags = {
     Owner = "filiatra@amazon.com"
