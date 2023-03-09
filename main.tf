@@ -85,7 +85,7 @@ module "eks" {
       #EOT
 
       post_bootstrap_user_data = <<-EOT
-      NetworkInterfaceId=`aws ec2 create-network-interface --description "LNI" --subnet-id ${module.vpc.outpost_subnets[0]} --tag-specifications 'ResourceType=network-interface,Tags=[{Key=node.k8s.amazonaws.com/no_manage,Value=true},{Key=multus,Value=true},{Key=cluster,Value=${module.eks.cluster_name}},{Key=Zone,Value=data.aws_outposts_outpost.shared.availability_zone}]' --output text --query 'NetworkInterface.NetworkInterfaceId'`
+      NetworkInterfaceId=`aws ec2 create-network-interface --description "LNI" --subnet-id ${module.vpc.outpost_subnets[0]} --tag-specifications 'ResourceType=network-interface,Tags=[{Key=node.k8s.amazonaws.com/no_manage,Value=true},{Key=multus,Value=true},{Key=cluster,Value=${module.eks.cluster_name}},{Key=Zone,Value=${data.aws_outposts_outpost.shared.availability_zone}},{Key=Name,Value=LNI},{Key=Owner,Value=filiatra@amazon.com}]' --output text --query 'NetworkInterface.NetworkInterfaceId'`
       export TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
       export INSTANCEID=`curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id`
       aws ec2 attach-network-interface  --device-index 1 --network-interface-id $NetworkInterfaceId --instance-id $INSTANCEID
@@ -117,13 +117,14 @@ module "eks" {
       EOT
       # TODO: for reuse CIDR block in above iptables line needs to be dynamically looked up (or parameterized)
 
+      subnet_ids = [module.vpc.outpost_subnets[0]]
       network_interfaces = [
         {
           description                 = "ENI"
           delete_on_termination       = true
           device_index                = 0
           associate_public_ip_address = false
-          subnet_id                   = module.vpc.outpost_subnets[0]
+          #subnet_id                   = module.vpc.outpost_subnets[0]
         }
       ]
       
@@ -260,13 +261,13 @@ resource "null_resource" "update_kubeconfig" {
 }
 
 resource "null_resource" "install_metallb" {
-  depends_on = [ null_resource.update_kubeconfig ]  # add dependancy on cluster created
+  depends_on = [ null_resource.update_kubeconfig ] 
   provisioner "local-exec" {
     command = "kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.13.9/config/manifests/metallb-native.yaml"
   }
 }
 
-resource "kubectl_manifest" "test" {
+resource "kubectl_manifest" "deploy_metallb_pool" {
   depends_on = [null_resource.install_metallb]
     yaml_body = <<YAML
 ---
@@ -290,4 +291,19 @@ spec:
   interfaces:
   - eth1
 YAML
+}
+
+resource "null_resource" "deploy_nginx" {
+  depends_on = [ kubectl_manifest.deploy_metallb_pool ]  
+  provisioner "local-exec" {
+    command = "kubectl create deployment nginx --image=nginx"
+  }
+}
+
+
+resource "null_resource" "expose_nginx" {
+  depends_on = [ null_resource.deploy_nginx ]  
+  provisioner "local-exec" {
+    command = "kubectl expose deploy nginx --port 80 --type LoadBalancer"
+  }
 }
