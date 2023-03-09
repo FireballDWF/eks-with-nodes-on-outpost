@@ -100,7 +100,7 @@ module "eks" {
       PEERDNS=no
       EC2SYNC=no
       EOF
-      aws ec2 create-network-interface --description "LNI" --subnet-id ${module.vpc.outpost_subnets[0]} --tag-specifications ResourceType=network-interface,Tags=[{"node.k8s.amazonaws.com/no_manage"="true"}]
+      aws ec2 create-network-interface --description "LNI" --subnet-id ${module.vpc.outpost_subnets[0]} --tag-specifications 'ResourceType=network-interface,Tags=[{Key=node.k8s.amazonaws.com/no_manage,Value=true}]'
       # TODO Insert aws ec2 attach-network-interface  --device-index 1
       cat <<-EOF > /var/lib/cloud/scripts/per-boot/lni-setup.sh
       /sbin/dhclient -r -lf /var/lib/dhclient/dhclient--eth1.lease -pf /var/run/dhclient-eth1.pid eth1
@@ -248,4 +248,43 @@ resource "null_resource" "outpost_server_subnets" {
   provisioner "local-exec" {
     command = "aws ec2 modify-subnet-attribute --subnet-id ${module.vpc.outpost_subnets[0]} --enable-lni-at-device-index 1"
   }
+}
+
+resource "null_resource" "update_kubeconfig" {
+  provisioner "local-exec" {
+    command = ["aws eks update-kubeconfig --name ${module.eks.cluster_name} --region local.region"]
+  }
+}
+
+resource "null_resource" "install_metallb" {
+  depends_on = [ null_resource.update_kubeconfig ]  # add dependancy on cluster created
+  provisioner "local-exec" {
+    command = "kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.13.9/config/manifests/metallb-native.yaml"
+  }
+}
+
+resource "kubectl_manifest" "test" {
+  depends_on = [null_resource.install_metallb]
+    yaml_body = <<YAML
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: first-pool
+  namespace: metallb-system
+spec:
+  addresses:
+  - 192.168.2.169/32
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: example
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+  - first-pool
+  interfaces:
+  - eth1
+YAML
 }
