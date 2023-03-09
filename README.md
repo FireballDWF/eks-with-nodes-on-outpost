@@ -23,12 +23,13 @@ EKS on Outposts currently is only *supported* on the Racks form factor, thus run
 
 Low Priority:
 1. eth1 LNI changes to use DHCP from local network don't survive reboot - lower priority sysadmin level fix. 
-1.1. EKS will even call ec2:DetachNetworkInterface on an LNI (for reasons currently unknown)
+1. as lni created from within userdata, need a lambda or some other method to cleanup these interfaces when instances they are attached to are terminated
 2. Will need ability to run cloud-init from userdata, or to write scripts which get executed when required like for partition. Asked Oscar M for examples
 
 High Priority:
 1. curl -v http://192.168.2.169:80 from node which is not the current metallb speaker.  Expect need to setup the multus cni per quip doc
-
+1.1. Remove LNI creation from nodegroup creation time, add as an userdata command to create, with the tag  then attach the network interface.  
+1.2. Consult https://docs.aws.amazon.com/eks/latest/userguide/pod-multiple-network-interfaces.html and https://github.com/aws-samples/eks-install-guide-for-multus as needed
 ## Identified tests not executed yet
 
 Low:

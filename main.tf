@@ -85,6 +85,10 @@ module "eks" {
       #EOT
 
       post_bootstrap_user_data = <<-EOT
+      NetworkInterfaceId=`aws ec2 create-network-interface --description "LNI" --subnet-id ${module.vpc.outpost_subnets[0]} --tag-specifications 'ResourceType=network-interface,Tags=[{Key=node.k8s.amazonaws.com/no_manage,Value=true},{Key=multus,Value=true},{Key=cluster,Value=${module.eks.cluster_name}},{Key=Zone,Value=data.aws_outposts_outpost.shared.availability_zone}]' --output text --query 'NetworkInterface.NetworkInterfaceId'`
+      export TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
+      export INSTANCEID=`curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id`
+      aws ec2 attach-network-interface  --device-index 1 --network-interface-id $NetworkInterfaceId --instance-id $INSTANCEID
       /bin/yum install -y amazon-cloudwatch-agent
       /bin/curl https://ams-configuration-artifacts-us-west-2.s3.us-west-2.amazonaws.com/configurations/cloudwatch/latest/linux-cloudwatch-config.json -o /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d/ams-accelerate-config.json
       /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d/ams-accelerate-config.json
@@ -100,8 +104,7 @@ module "eks" {
       PEERDNS=no
       EC2SYNC=no
       EOF
-      aws ec2 create-network-interface --description "LNI" --subnet-id ${module.vpc.outpost_subnets[0]} --tag-specifications 'ResourceType=network-interface,Tags=[{Key=node.k8s.amazonaws.com/no_manage,Value=true}]'
-      # TODO Insert aws ec2 attach-network-interface  --device-index 1
+
       cat <<-EOF > /var/lib/cloud/scripts/per-boot/lni-setup.sh
       /sbin/dhclient -r -lf /var/lib/dhclient/dhclient--eth1.lease -pf /var/run/dhclient-eth1.pid eth1
       /usr/sbin/ifconfig eth1 down
@@ -252,7 +255,7 @@ resource "null_resource" "outpost_server_subnets" {
 
 resource "null_resource" "update_kubeconfig" {
   provisioner "local-exec" {
-    command = ["aws eks update-kubeconfig --name ${module.eks.cluster_name} --region local.region"]
+    command = "aws eks update-kubeconfig --name ${module.eks.cluster_name} --region ${local.region}"
   }
 }
 
