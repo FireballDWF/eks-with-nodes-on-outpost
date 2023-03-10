@@ -19,7 +19,10 @@ EKS on Outposts currently is only *supported* on the Racks form factor, thus run
 
 High Priority:
 1. curl -v http://192.168.2.169:80 from device other than the Outposts Server it's running on.  Expect need to setup the multus cni per quip doc
-
+    1. arping -I eth1 192.168.2.169 is not working either
+    2. kubectl -n kube-system get services
+    3. kubectl -n kube-system get all
+    4. Multus did not seem to deploy via terraform, need to redo from scratch to determine why, installed manually for now
 
 Low Priority:
 1. as lni created from within userdata, need a lambda or some other method to cleanup these interfaces when instances they are attached to are terminated
