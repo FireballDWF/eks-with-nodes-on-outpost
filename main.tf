@@ -85,9 +85,9 @@ module "eks" {
       #EOT
 
       post_bootstrap_user_data = <<-EOT
-      NetworkInterfaceId=`aws ec2 create-network-interface --description "LNI" --subnet-id ${module.vpc.outpost_subnets[0]} --tag-specifications 'ResourceType=network-interface,Tags=[{Key=node.k8s.amazonaws.com/no_manage,Value=true},{Key=multus,Value=true},{Key=cluster,Value=${module.eks.cluster_name}},{Key=Zone,Value=${data.aws_outposts_outpost.shared.availability_zone}},{Key=Name,Value=LNI},{Key=Owner,Value=filiatra@amazon.com}]' --output text --query 'NetworkInterface.NetworkInterfaceId'`
       export TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
       export INSTANCEID=`curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id`
+      NetworkInterfaceId=`aws ec2 create-network-interface --description "LNI" --subnet-id ${module.vpc.outpost_subnets[0]} --tag-specifications 'ResourceType=network-interface,Tags=[{Key=node.k8s.amazonaws.com/no_manage,Value=true},{Key=multus,Value=true},{Key=cluster,Value=${module.eks.cluster_name}},{Key=Zone,Value=${data.aws_outposts_outpost.shared.availability_zone}},{Key=Name,Value=LNI of $INSTANCEID},{Key=Owner,Value=filiatra@amazon.com}]' --output text --query 'NetworkInterface.NetworkInterfaceId'`
       aws ec2 attach-network-interface  --device-index 1 --network-interface-id $NetworkInterfaceId --instance-id $INSTANCEID
       /bin/yum install -y amazon-cloudwatch-agent
       /bin/curl https://ams-configuration-artifacts-us-west-2.s3.us-west-2.amazonaws.com/configurations/cloudwatch/latest/linux-cloudwatch-config.json -o /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d/ams-accelerate-config.json
@@ -496,6 +496,72 @@ spec:
         - name: cnibin
           hostPath:
             path: /opt/cni/bin
+
+YAML
+}
+
+resource "kubectl_manifest" "deploy_ipvlan" {
+  #depends_on = [null_resource.install_metallb]  # should determine actual dependancies and anything that should depend on it
+  # body of below is directly from  https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/master/config/multus/v3.9.2-eksbuild.1/aws-k8s-multus.yaml
+    yaml_body = <<YAML
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: lni-ipvlan-1
+spec:
+  config: '{
+      "cniVersion": "0.3.1",
+      "name": "lni-ipvlan-1",
+      "plugins": [
+        {
+          "type": "ipvlan",
+          "master": "eth1",
+          "mode": "l2",
+          "ipam": {
+            "type": "static",
+            "addresses": [
+               {
+                 "address": "192.168.2.170/22",
+                 "gateway": "192.168.1.1"
+               }
+            ],
+            "routes": [
+              { "dst": "192.168.0.0/22" }
+            ]
+          }
+        }
+      ]
+    }'
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: lni-ipvlan-2
+spec:
+  config: '{
+      "cniVersion": "0.3.1",
+      "name": "lni-ipvlan-1",
+      "plugins": [
+        {
+          "type": "ipvlan",
+          "master": "eth2",
+          "mode": "l2",
+          "ipam": {
+            "type": "static",
+            "addresses": [
+               {
+                 "address": "192.168.2.171/22",
+                 "gateway": "192.168.1.1"
+               }
+            ],
+            "routes": [
+              { "dst": "192.168.0.0/22" }
+            ]
+          }
+        }
+      ]
+    }'
 
 YAML
 }
