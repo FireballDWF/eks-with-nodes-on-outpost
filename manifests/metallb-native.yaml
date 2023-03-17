@@ -1685,8 +1685,6 @@ metadata:
     component: controller
   name: controller
   namespace: metallb-system
-  annotations:
-    k8s.v1.cni.cncf.io/networks: lni-ipvlan-2
 spec:
   revisionHistoryLimit: 3
   selector:
@@ -1769,8 +1767,6 @@ metadata:
     component: speaker
   name: speaker
   namespace: metallb-system
-  annotations:
-    k8s.v1.cni.cncf.io/networks: lni-ipvlan-1
 spec:
   selector:
     matchLabels:

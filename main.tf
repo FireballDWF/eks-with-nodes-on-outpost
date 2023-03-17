@@ -294,23 +294,16 @@ resource "kubectl_manifest" "all_manifests" {
     yaml_body = each.value
 }
 
-resource "null_resource" "deploy_nginx" {
-  depends_on = [ kubectl_manifest.all_manifests ]  
-  provisioner "local-exec" {
-    command = "kubectl create deployment nginx --image=nginx"
-  }
-}
+#resource "null_resource" "expose_nginx" {
+#  depends_on = [ kubectl_manifest.all_manifests ]  
+#  provisioner "local-exec" {
+#    command = "kubectl expose deploy nginx --port 80 --type LoadBalancer"
+#  }
+#}
 
-resource "null_resource" "expose_nginx" {
-  depends_on = [ null_resource.deploy_nginx ]  
-  provisioner "local-exec" {
-    command = "kubectl expose deploy nginx --port 80 --type LoadBalancer"
-  }
-}
-
-resource "null_resource" "create_memberlist" {
-  depends_on = [ null_resource.deploy_nginx ]  
-  provisioner "local-exec" {
-    command = "kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey=\"$(openssl rand -base64 128)\""
-  }
-}
+#resource "null_resource" "create_memberlist" {
+#  depends_on = [ kubectl_manifest.all_manifests ]  
+#  provisioner "local-exec" {
+#    command = "kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey=\"$(openssl rand -base64 128)\""
+#  }
+#}
