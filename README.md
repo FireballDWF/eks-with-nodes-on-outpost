@@ -12,7 +12,7 @@ EKS on Outposts currently is only *supported* on the Racks form factor, thus run
 
 1. Deployed an nginx workload with MetalLB using the https://devopslearning.medium.com/metallb-load-balancer-for-bare-metal-kubernetes-43686aa0724f as the guide for nginx but not for MetalLB.
 1. Exposing a workload via the [LNI](https://docs.aws.amazon.com/outposts/latest/server-userguide/local-network-interface.html) using a Load Balancer such as [MetalLB in Layer 2 (Gratuitous ARP) mode](https://metallb.universe.tf/concepts/layer2/). 
-1. Testing conducted by repo owner has only been done on a single Outposts Server.  Thus have NOT attempted to configure nor test getting nodes of different servers to talk to each other via the [LNI](https://docs.aws.amazon.com/outposts/latest/server-userguide/local-network-interface.html) of the Server. 
+1. Testing conducted by repo owner has only been done on a single Outposts Server.  Thus have NOT attempted to configure nor test getting pods on nodes/instances on different servers to talk to each other via their [LNI](https://docs.aws.amazon.com/outposts/latest/server-userguide/local-network-interface.html) interfaces. 
 1. Session Manager works with AL2's EKS optimized AMI.  Have not attempted to test on RHEL 8.4+ yet.
 
 ## Current issues:
@@ -23,6 +23,7 @@ High Priority:
     2. kubectl -n kube-system get services
     3. kubectl -n kube-system get all
     4. Multus did not seem to deploy via terraform, need to redo from scratch to determine why, installed manually for now
+
 
 Low Priority:
 1. as lni created from within userdata, need a lambda or some other method to cleanup these interfaces when instances they are attached to are terminated
@@ -43,5 +44,8 @@ Medium:
     2. Nodes register in cluster 
 2. cli
     1. kubectl get nodes -o wide
-    2. kubectl get services   
-    3. curl -v http://192.168.2.169:80 from both worker nodes.
+    2. kubectl get service -o wide 
+    3. curl -v http://192.168.2.169:80 from both worker nodes
+    4. aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names filiatra-eks-outpost-tf-20230309033512377400000003  --output text --query 'AutoScalingGroups[0].Instances[*].InstanceId' 
+    5. kubectl get all -n metallb-system -o wide
+    6. 
