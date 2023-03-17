@@ -147,6 +147,7 @@ module "eks" {
   aws_auth_node_iam_role_arns_non_windows = [
     data.aws_outposts_outpost.shared.arn,
     data.aws_caller_identity.current.arn
+    # Add more IAM Role Arn's here here
   ]
 
  cluster_addons = {
@@ -304,5 +305,12 @@ resource "null_resource" "expose_nginx" {
   depends_on = [ null_resource.deploy_nginx ]  
   provisioner "local-exec" {
     command = "kubectl expose deploy nginx --port 80 --type LoadBalancer"
+  }
+}
+
+resource "null_resource" "create_memberlist" {
+  depends_on = [ null_resource.deploy_nginx ]  
+  provisioner "local-exec" {
+    command = "kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey=\"$(openssl rand -base64 128)\""
   }
 }
