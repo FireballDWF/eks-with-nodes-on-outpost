@@ -18,14 +18,11 @@ EKS on Outposts currently is only *supported* on the Racks form factor, thus run
 ## Current issues:
 
 High Priority:
-1. curl -v http://192.168.2.169:80 from device other than the Outposts Server it's running on.  Expect need to setup the multus cni per quip doc
-    1. Should use tcpdump to see if arp is leaving the eth1 interface.  Reason is that suspect iptables filter may drop metallb's gratious arp (on eth1)
-    1. arping -I eth1 192.168.2.169 is not working either
-    1. May need to change METALLB_ML_BIND_ADDR={{status.podIP}}.  
-    1. Currently suspect that metallb's default setting of "hostNetwork: true" means multus will not be used
-    1. MountVolume.SetUp failed for volume "memberlist" : secret "memberlist" not found
-        low priority, suspect a red-herring
-
+1. curl -v http://192.168.2.169:80 
+    1. Failed tests from:
+        1. device other than the Outposts Server it's running on.  After most recent change on 3/17/23, have asked for a retest, result pending!
+            1. However the following does work: From a container test "kubectl exec -it lni-sample-kernel-networking -- /bin/bash" running on same instance where curl worked at instance level.
+    1. Works from worker node guest OS, but requests are arriving on eth2 per tcpdump
 
 Low Priority:
 1. as lni created from within userdata, need a lambda or some other method to cleanup these interfaces when instances they are attached to are terminated
@@ -51,3 +48,4 @@ Medium:
     4. aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names filiatra-eks-outpost-tf-20230309033512377400000003  --output text --query 'AutoScalingGroups[0].Instances[*].InstanceId' 
     5. kubectl get all -n metallb-system -o wide
     6. kubectl get ns  
+    7. arping -I eth1 192.168.2.169
