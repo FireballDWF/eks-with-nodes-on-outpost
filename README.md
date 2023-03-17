@@ -19,9 +19,12 @@ EKS on Outposts currently is only *supported* on the Racks form factor, thus run
 
 High Priority:
 1. curl -v http://192.168.2.169:80 from device other than the Outposts Server it's running on.  Expect need to setup the multus cni per quip doc
+    1. Should use tcpdump to see if arp is leaving the eth1 interface.  Reason is that suspect iptables filter may drop metallb's gratious arp (on eth1)
     1. arping -I eth1 192.168.2.169 is not working either
-    1. controller container does not have eth1/net1 interface, need to try deploy
-    1. 
+    1. May need to change METALLB_ML_BIND_ADDR={{status.podIP}}.  
+    1. Currently suspect that metallb's default setting of "hostNetwork: true" means multus will not be used
+    1. MountVolume.SetUp failed for volume "memberlist" : secret "memberlist" not found
+        low priority, suspect a red-herring
 
 
 Low Priority:
@@ -47,4 +50,4 @@ Medium:
     3. curl -v http://192.168.2.169:80 from both worker nodes
     4. aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names filiatra-eks-outpost-tf-20230309033512377400000003  --output text --query 'AutoScalingGroups[0].Instances[*].InstanceId' 
     5. kubectl get all -n metallb-system -o wide
-    6. 
+    6. kubectl get ns  
