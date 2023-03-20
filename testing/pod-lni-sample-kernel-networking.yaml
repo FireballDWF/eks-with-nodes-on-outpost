@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: lni-sample-kernel-networking
+  annotations:
+    k8s.v1.cni.cncf.io/networks: lni-ipvlan-4
+spec:
+  containers:
+  - name: ubuntu
+    command: ["/bin/bash", "-c", "trap : TERM INT; sleep infinity & wait"]
+    image: ubuntu:latest
+    lifecycle:
+      postStart:
+        exec:
+          command:
+            [
+              "/bin/sh",
+              "-c",
+              "apt update -y; apt install -y net-tools iputils-ping arping curl",
+            ]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: lni-test-dhcp
+  annotations:
+    k8s.v1.cni.cncf.io/networks: lni-ipvlan-3
+spec:
+  containers:
+  - name: ubuntu
+    command: ["/bin/bash", "-c", "trap : TERM INT; sleep infinity & wait"]
+    image: ubuntu:latest
+    lifecycle:
+      postStart:
+        exec:
+          command:
+            [
+              "/bin/sh",
+              "-c",
+              "apt update -y; apt install -y net-tools iputils-ping arping curl",
+            ]

@@ -72,16 +72,7 @@ spec:
           "master": "eth1",
           "mode": "l2",
           "ipam": {
-            "type": "static",
-            "addresses": [
-               {
-                 "address": "192.168.2.172/22",
-                 "gateway": "192.168.1.1"
-               }
-            ],
-            "routes": [
-              { "dst": "192.168.0.0/22" }
-            ]
+            "type": "dhcp"
           }
         }
       ]
