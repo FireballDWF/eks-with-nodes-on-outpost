@@ -4,7 +4,7 @@
 EKS on Outposts currently is only *supported* on the Racks form factor, thus running on the Servers form factor is not currently officially *supported*.  However, this repo shows a specific example where the cluster can be created with worker nodes running on the Outposts Server, however this configuration is *not currently supported*, but doesn't mean it doesn't actually work...
 
 ## Limitations (Known)
-1. This example is based the deployment option known as [Extended Clusters](https://docs.aws.amazon.com/eks/latest/userguide/eks-outposts.html#outposts-overview-comparing-deployment-options) where the kubernetes control plane nodes run in the region, thus not on the Outposts Servers.  The "Local Clusters" deployment option is currently not available due to [Outposts Servers requiring AMIs to be composed of only a single snapshot](https://docs.aws.amazon.com/outposts/latest/server-userguide/launch-instance.html#launch-instances) combined with fact that EKS Control Plane nodes are implemented using the Bottlerocket AMI, which currently is composed of two snapshots.  (To see this for yourself, deploy EKS Local Clusters to an Outposts Rack, observe the new EC2 instances that get created, then describe one of those new instances to see the AMIid, then describe the AMI to see the composition of the snapshots)
+1. This example is based the deployment option known as [Extended Clusters](https://docs.aws.amazon.com/eks/latest/userguide/eks-outposts.html#outposts-overview-comparing-deployment-options) where the kubernetes control plane nodes run in the region, thus not on the Outposts Servers.  The "Local Clusters" deployment option is currently not available due to [Outposts Servers requiring AMIs to be composed of only a single snapshot](https://docs.aws.amazon.com/outposts/latest/server-userguide/launch-instance.html#launch-instances) combined with fact that EKS Control Plane nodes are implemented using the [Bottlerocket](https://aws.amazon.com/bottlerocket/faqs/) AMI, which currently is composed of two snapshots.  (To see this for yourself, deploy EKS Local Clusters to an Outposts Rack, observe the new EC2 instances that get created, then describe one of those new instances to see the AMIid, then describe the AMI to see the composition of the snapshots)
 
 2. Nodes in your Node Groups are subject to the same AMI limitations referenced above, thus can't use Bottlerocket or any other AMI composed of more than 1 snapshot.  This example currently uses an EKS-Optimized AmazonLinux2 AMI
 
@@ -20,8 +20,14 @@ EKS on Outposts currently is only *supported* on the Racks form factor, thus run
 High Priority:
 1. curl -v http://192.168.2.169:80 
     1. Failed tests from:
-        1. device other than the Outposts Server it's running on.  After most recent change on 3/17/23, have asked for a retest, result pending!
+        1. device other than the Outposts Server it's running on, as configured before 3/17/23.  After most recent change on 3/17/23, have asked for a retest, result pending!
             1. However the following does work: From a container test "kubectl exec -it lni-sample-kernel-networking -- /bin/bash" running on same instance where curl worked at instance level.
+            2. If retest is successful, then next step is to start to make current static config more dynamic:
+                1. test ipam from the "Creating additional interfaces" section of https://aws.amazon.com/blogs/containers/amazon-eks-now-supports-multus-cni/ and aso see https://github.com/aws-samples/eks-install-guide-for-multus/blob/main/cfn/templates/nodegroup/README.md
+                sudo /opt/cni/bin/dhcp daemon
+                /var/log/pods to cloudwatch
+                TODO: Cost Optimization: how to configure that an aws LB should not be deployed, as only want the MetalLB 
+                2. Also consider userdata example from https://github.com/aws-samples/eks-install-guide-for-multus/blob/main/cfn/templates/nodegroup/eks-nodegroup-multus.yaml
     1. Works from worker node guest OS, but requests are arriving on eth2 per tcpdump
 
 Low Priority:

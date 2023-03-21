@@ -284,6 +284,7 @@ resource "null_resource" "update_kubeconfig" {
 # yaml sources
 # https://raw.githubusercontent.com/metallb/metallb/v0.13.9/config/manifests/metallb-native.yaml
 # https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/master/config/multus/v3.9.2-eksbuild.1/aws-k8s-multus.yaml
+# https://github.com/k8snetworkplumbingwg/reference-deployment/blob/master/multus-dhcp/dhcp-daemonset.yml
 
 data "kubectl_path_documents" "docs" {
     pattern = "./manifests/*.yaml"

@@ -27,7 +27,7 @@ metadata:
     k8s.v1.cni.cncf.io/networks: lni-ipvlan-3
 spec:
   containers:
-  - name: ubuntu
+  - name: lnitest
     command: ["/bin/bash", "-c", "trap : TERM INT; sleep infinity & wait"]
     image: ubuntu:latest
     lifecycle:
