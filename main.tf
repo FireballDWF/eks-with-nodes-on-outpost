@@ -287,7 +287,7 @@ resource "null_resource" "update_kubeconfig" {
 # https://github.com/k8snetworkplumbingwg/reference-deployment/blob/master/multus-dhcp/dhcp-daemonset.yml
 
 data "kubectl_path_documents" "docs" {
-    pattern = "./manifests/*.yaml"
+    pattern = "./manifests/*.y*ml"
 }
 
 resource "kubectl_manifest" "all_manifests" {
