@@ -3,6 +3,8 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: kube-dhcp-ds-amd64
+  annotations:
+    k8s.v1.cni.cncf.io/networks: lni-ipvlan-2  
   namespace: kube-system
   labels:
     tier: node
@@ -18,7 +20,7 @@ spec:
         tier: node
         app: dhcp
     spec:
-      hostNetwork: true
+      #hostNetwork: true   # commented out to favor the lni-ipvlan-2 instead
       nodeSelector:
         beta.kubernetes.io/arch: amd64
       tolerations:
