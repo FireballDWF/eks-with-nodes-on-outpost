@@ -26,7 +26,7 @@ metadata:
   annotations:
     k8s.v1.cni.cncf.io/networks: lni-ipvlan-3
 spec:
-  hostNetwork: true
+  #hostNetwork: true
   containers:
   - name: lnitest
     command: ["/bin/bash", "-c", "trap : TERM INT; sleep infinity & wait"]
