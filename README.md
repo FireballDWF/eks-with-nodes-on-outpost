@@ -17,18 +17,10 @@ EKS on Outposts currently is only *supported* on the Racks form factor, thus run
 
 ## Current issues:
 
-High Priority:
-1. curl -v http://192.168.2.169:80 
-    1. Failed tests from:
-        1. device other than the Outposts Server it's running on, as configured before 3/17/23.  After most recent change on 3/17/23, have asked for a retest, result pending!
-            1. However the following does work: From a container test "kubectl exec -it lni-sample-kernel-networking -- /bin/bash" running on same instance where curl worked at instance level.
-            2. If retest is successful, then next step is to start to make current static config more dynamic:
-                1. test ipam from the "Creating additional interfaces" section of https://aws.amazon.com/blogs/containers/amazon-eks-now-supports-multus-cni/ and aso see https://github.com/aws-samples/eks-install-guide-for-multus/blob/main/cfn/templates/nodegroup/README.md
-                sudo /opt/cni/bin/dhcp daemon
-                /var/log/pods to cloudwatch
-                TODO: Cost Optimization: how to configure that an aws LB should not be deployed, as only want the MetalLB 
-                2. Also consider userdata example from https://github.com/aws-samples/eks-install-guide-for-multus/blob/main/cfn/templates/nodegroup/eks-nodegroup-multus.yaml
-    1. Works from worker node guest OS, but requests are arriving on eth2 per tcpdump
+Medium Priority:
+1. LNI configurations of kind=NetworkAttachmentDefinition via https://github.com/FireballDWF/eks-with-nodes-on-outpost/blob/main/manifests/lni.yaml are all statically configured.
+    1. Have not figured out how to get ipvlan ipam type=dhcp to work, submitted https://github.com/containernetworking/plugins/issues/862
+    2. In meantime, next step is to try at least IP ranges in the static configuration so could try to reduce the number of different ipvlan configurations required
 
 Low Priority:
 1. as lni created from within userdata, need a lambda or some other method to cleanup these interfaces when instances they are attached to are terminated
@@ -37,21 +29,28 @@ Low Priority:
 
 ## Identified tests not executed yet
 Low:
-1. TBD
+1. Cost Optimization: 
+    1. how to configure that an aws LB should not be deployed, as only want the MetalLB 
+2.  Also consider userdata example for rc.local from https://github.com/aws-samples/eks-install-guide-for-multus/blob/main/cfn/templates/nodegroup/eks-nodegroup-multus.yaml
 
 Medium:
 1. redo config for custom EKS for RHEL 8.7 AMI for EKS 1.24 since need to get into distro specific network setup.
 
 ## Successful tests
 
-1. Console  
-    1. Nodes Health in ASG
-    2. Nodes register in cluster 
-2. cli
-    1. kubectl get nodes -o wide
-    2. kubectl get service -o wide 
-    3. curl -v http://192.168.2.169:80 from both worker nodes
-    4. aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names filiatra-eks-outpost-tf-20230309033512377400000003  --output text --query 'AutoScalingGroups[0].Instances[*].InstanceId' 
-    5. kubectl get all -n metallb-system -o wide
-    6. kubectl get ns  
-    7. arping -I eth1 192.168.2.169
+1. Workload Specific:
+    1. Primary test:
+        1. curl -v http://192.168.2.169:80 
+    1. Troubleshooting tests
+        1. arping -I eth1 192.168.2.169
+1. General Cluster Health
+    1. Console  
+        1. Nodes Health in ASG
+        2. Nodes register in cluster 
+    2. cli
+        1. kubectl get nodes -o wide
+        2. kubectl get service -o wide 
+        3. from both worker nodes
+        4. aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names filiatra-eks-outpost-tf-20230309033512377400000003  --output text --query 'AutoScalingGroups[0].Instances[*].InstanceId' 
+        5. kubectl get all -n metallb-system -o wide
+        6. kubectl get ns  
