@@ -31,6 +31,7 @@ Low Priority:
 
 High:
 1. Test actual failover where Instance that metallb is arping from is terminated, thus expected behavior is other MetalLB node detects the failure, and starts arp'ing from the remaining node, service is still accessible, and replacement node comes up automatically, and can then terminate the current primary, and the replacement becomes primary and works.
+2. Can communication between Pods and Nodes be configured to occur only thru an LNI interface?  (As the default is for communication to occur via the default ENI thus VPC communication, attempts to communication to other servers via VPC, which would get routed thru the region, would get dropped in the region)
 
 Low:
 1. Cost Optimization: 
