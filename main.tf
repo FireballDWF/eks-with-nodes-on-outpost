@@ -2,31 +2,6 @@ provider "aws" {
   region  = local.region
 }
 
-provider "kubernetes" {
-  host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    command     = "aws"
-    args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", local.region]
-  }
-}
-
-provider "helm" {
-  kubernetes {
-    host                   = module.eks.cluster_endpoint
-    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-
-    exec {
-      api_version = "client.authentication.k8s.io/v1beta1"
-      command     = "aws"
-      # This requires the awscli to be installed locally where Terraform is executed
-      args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", local.region]
-    }
-  }
-}
-
 provider "kubectl" {
   apply_retry_count      = 10
   host                   = module.eks.cluster_endpoint
@@ -294,13 +269,6 @@ resource "kubectl_manifest" "all_manifests" {
     for_each  = toset(data.kubectl_path_documents.docs.documents)
     yaml_body = each.value
 }
-
-#resource "null_resource" "expose_nginx" {
-#  depends_on = [ kubectl_manifest.all_manifests ]  
-#  provisioner "local-exec" {
-#    command = "kubectl expose deploy nginx --port 80 --type LoadBalancer"
-#  }
-#}
 
 #resource "null_resource" "create_memberlist" {
 #  depends_on = [ kubectl_manifest.all_manifests ]  
