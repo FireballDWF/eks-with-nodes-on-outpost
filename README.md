@@ -28,6 +28,10 @@ Low Priority:
 3. parameterize eth1, 192.168.x.x, and other hardcoded values
 
 ## Identified tests not executed yet
+
+High:
+1. Test actual failover where Instance that metallb is arping from is terminated, thus expected behavior is other MetalLB node detects the failure, and starts arp'ing from the remaining node, service is still accessible, and replacement node comes up automatically, and can then terminate the current primary, and the replacement becomes primary and works.
+
 Low:
 1. Cost Optimization: 
     1. how to configure that an aws LB should not be deployed, as only want the MetalLB 
