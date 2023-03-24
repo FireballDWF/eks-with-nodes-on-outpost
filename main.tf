@@ -28,7 +28,7 @@ module "eks" {
 
   cluster_endpoint_public_access  = true
   cluster_endpoint_private_access = true
-  cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"]
+  cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"]   #TODO: determine if can use prefix list, or at least restrict to my ISP
 
   vpc_id     = module.vpc.vpc_id
   control_plane_subnet_ids = module.vpc.public_subnets
@@ -62,7 +62,7 @@ module "eks" {
       post_bootstrap_user_data = <<-EOT
       export TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
       export INSTANCEID=`curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id`
-      NetworkInterfaceId=`aws ec2 create-network-interface --description "LNI" --subnet-id ${module.vpc.outpost_subnets[0]} --tag-specifications 'ResourceType=network-interface,Tags=[{Key=node.k8s.amazonaws.com/no_manage,Value=true},{Key=multus,Value=true},{Key=cluster,Value=${module.eks.cluster_name}},{Key=Zone,Value=${data.aws_outposts_outpost.shared.availability_zone}},{Key=Name,Value=LNI of '$INSTANCEID'},{Key=Owner,Value=filiatra@amazon.com}]' --output text --query 'NetworkInterface.NetworkInterfaceId'`
+      NetworkInterfaceId=`aws ec2 create-network-interface --description "LNI" --subnet-id ${module.vpc.outpost_subnets[1]} --tag-specifications 'ResourceType=network-interface,Tags=[{Key=node.k8s.amazonaws.com/no_manage,Value=true},{Key=multus,Value=true},{Key=cluster,Value=${module.eks.cluster_name}},{Key=Zone,Value=${data.aws_outposts_outpost.shared.availability_zone}},{Key=Name,Value=LNI of '$INSTANCEID'},{Key=Owner,Value=filiatra@amazon.com}]' --output text --query 'NetworkInterface.NetworkInterfaceId'`
       echo "Created LNI $NetworkInterfaceId"
       aws ec2 attach-network-interface  --device-index 1 --network-interface-id $NetworkInterfaceId --instance-id $INSTANCEID
       /bin/yum install -y amazon-cloudwatch-agent
@@ -205,7 +205,7 @@ module "vpc" {
   private_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 10)]
 
   # Outpost is using single AZ specified in `outpost_az`
-  outpost_subnets = ["10.50.80.0/24"] #, "10.50.90.0/24"]
+  outpost_subnets = ["10.50.80.0/20", "10.50.96.0/20"]
   outpost_arn     = data.aws_outposts_outpost.shared.arn
   outpost_az      = data.aws_outposts_outpost.shared.availability_zone
 
@@ -246,7 +246,7 @@ module "vpc" {
 # Required for Outposts Servers to enable LNI behavior per https://docs.aws.amazon.com/outposts/latest/server-userguide/local-network-interface.html#enable-lni
 resource "null_resource" "outpost_server_subnets" {
   provisioner "local-exec" {
-    command = "aws ec2 modify-subnet-attribute --subnet-id ${module.vpc.outpost_subnets[0]} --enable-lni-at-device-index 1"
+    command = "aws ec2 modify-subnet-attribute --subnet-id ${module.vpc.outpost_subnets[1]} --enable-lni-at-device-index 1"
   }
 }
 
@@ -270,9 +270,9 @@ resource "kubectl_manifest" "all_manifests" {
     yaml_body = each.value
 }
 
-#resource "null_resource" "create_memberlist" {
-#  depends_on = [ kubectl_manifest.all_manifests ]  
-#  provisioner "local-exec" {
-#    command = "kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey=\"$(openssl rand -base64 128)\""
-#  }
-#}
+resource "null_resource" "create_memberlist" {
+  depends_on = [ kubectl_manifest.all_manifests ]  
+  provisioner "local-exec" {
+    command = "kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey=\"$(openssl rand -base64 128)\""
+  }
+}
