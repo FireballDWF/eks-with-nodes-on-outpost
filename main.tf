@@ -1,6 +1,16 @@
 provider "aws" {
   region  = local.region
 }
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", local.region]
+  }
+}
 
 provider "kubectl" {
   apply_retry_count      = 10
@@ -117,12 +127,20 @@ module "eks" {
   }
 
   # Local clusters will automatically add the node group IAM role to the aws-auth configmap
+  # TODO: test if following are still needed
   create_aws_auth_configmap = true
   manage_aws_auth_configmap = true
-  aws_auth_node_iam_role_arns_non_windows = [
-    data.aws_outposts_outpost.shared.arn,
-    data.aws_caller_identity.current.arn
-    # Add more IAM Role Arn's here here
+  aws_auth_roles = [
+  #  data.aws_outposts_outpost.shared.arn,
+    { 
+      rolearn = data.aws_caller_identity.current.arn
+      username = "role1"
+      groups = ["system:masters"]
+    }
+  ]
+
+  aws_auth_accounts = [
+    data.aws_caller_identity.current.account_id
   ]
 
  cluster_addons = {
@@ -261,18 +279,65 @@ resource "null_resource" "update_kubeconfig" {
 # https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/master/config/multus/v3.9.2-eksbuild.1/aws-k8s-multus.yaml
 # https://github.com/k8snetworkplumbingwg/reference-deployment/blob/master/multus-dhcp/dhcp-daemonset.yml
 
-data "kubectl_path_documents" "docs" {
-    pattern = "./manifests/*.y*ml"
+data "kubectl_path_documents" "multus" {
+    pattern = "./manifests/aws-k8s-multus.yaml"
 }
-
-resource "kubectl_manifest" "all_manifests" {
-    for_each  = toset(data.kubectl_path_documents.docs.documents)
+resource "kubectl_manifest" "multus_manifests" {
+    depends_on = [ module.eks ]  
+    for_each  = toset(data.kubectl_path_documents.multus.documents)
     yaml_body = each.value
 }
 
-resource "null_resource" "create_memberlist" {
-  depends_on = [ kubectl_manifest.all_manifests ]  
-  provisioner "local-exec" {
-    command = "kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey=\"$(openssl rand -base64 128)\""
-  }
+data "kubectl_path_documents" "metallb" {
+    pattern = "./manifests/metallb-native.yaml"
 }
+resource "kubectl_manifest" "metallb_manifests" {
+    depends_on = [ module.eks ]  
+    for_each  = toset(data.kubectl_path_documents.metallb.documents)
+    yaml_body = each.value
+}
+
+data "kubectl_path_documents" "lni" {
+    pattern = "./manifests/lni.yaml"
+}
+resource "kubectl_manifest" "lni_manifests" {
+    depends_on = [ kubectl_manifest.multus_manifests ]  
+    for_each  = toset(data.kubectl_path_documents.lni.documents)
+    yaml_body = each.value
+}
+
+data "kubectl_path_documents" "metallb_pool" {
+    pattern = "./manifests/metallb-l2-pool.yaml"
+}
+resource "kubectl_manifest" "metallb_pool_manifests" {
+    depends_on = [ kubectl_manifest.metallb_manifests ]  
+    for_each  = toset(data.kubectl_path_documents.metallb_pool.documents)
+    yaml_body = each.value
+}
+
+data "kubectl_path_documents" "dhcp" {
+    pattern = "./manifests/metallb-l2-pool.yaml"
+}
+resource "kubectl_manifest" "dhcp_manifests" {
+    depends_on = [ kubectl_manifest.lni_manifests ]  
+    for_each  = toset(data.kubectl_path_documents.dhcp.documents)
+    yaml_body = each.value
+}
+
+data "kubectl_path_documents" "nginx" {
+    pattern = "./manifests/nginx.yaml"
+}
+
+resource "kubectl_manifest" "nginx_manifests" {
+    depends_on = [ kubectl_manifest.metallb_pool_manifests, kubectl_manifest.dhcp_manifests ]  
+    for_each  = toset(data.kubectl_path_documents.nginx.documents)
+    yaml_body = each.value
+}
+
+# does not appear to be needed anymore
+#resource "null_resource" "create_memberlist" {
+#  depends_on = [ kubectl_manifest.metallb_manifests ]  
+#  provisioner "local-exec" {
+#    command = "kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey=\"$(openssl rand -base64 128)\""
+#  }
+#}
