@@ -30,6 +30,13 @@ provider "kubectl" {
   }
 }
 
+data "aws_ec2_managed_prefix_list" "allow_cluster_endpoint_access" {
+  filter {
+    name   = "prefix-list-id"
+    values = ["pl-08dfb5b75e612d050"]
+  }
+}
+
 ################################################################################
 # EKS Module
 ################################################################################
@@ -42,7 +49,7 @@ module "eks" {
 
   cluster_endpoint_public_access  = true
   cluster_endpoint_private_access = true
-  cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"]   #TODO: determine if can use prefix list, or at least restrict to my ISP
+  cluster_endpoint_public_access_cidrs = flatten(data.aws_ec2_managed_prefix_list.allow_cluster_endpoint_access.entries[*].cidr)    #TODO: determine if can use prefix list, or at least restrict to my ISP
 
   vpc_id     = module.vpc.vpc_id
   control_plane_subnet_ids = module.vpc.public_subnets
@@ -180,7 +187,7 @@ module "eks" {
       from_port   = 80
       to_port     = 80
       type        = "ingress"
-      cidr_blocks = [local.vpc_cidr, "192.168.0.0/16"]
+      cidr_blocks = [local.vpc_cidr, local.local_network_cidr]
     }
     ingress_icmp = {
       description = "Node icmp"
@@ -188,7 +195,7 @@ module "eks" {
       from_port   = -1
       to_port     = -1
       type        = "ingress"
-      cidr_blocks = [local.vpc_cidr, "192.168.0.0/16"]
+      cidr_blocks = [local.vpc_cidr, local.local_network_cidr]
     }
   }
 
