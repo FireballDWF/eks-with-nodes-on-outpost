@@ -1,6 +1,10 @@
 provider "aws" {
   region  = local.region
+  ignore_tags { 
+    key_prefixes = [ "ams:" ] 
+  }
 }
+
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
@@ -96,7 +100,7 @@ module "eks" {
       /usr/sbin/ifconfig eth1 down
       /sbin/ip addr flush eth1
       /sbin/ifup eth1
-      /sbin/iptables -t nat -I POSTROUTING -j RETURN -d 192.168.0.0/22
+      /sbin/iptables -t nat -I POSTROUTING -j RETURN -d ${local.local_network_cidr}
       EOF
       chmod +x /var/lib/cloud/scripts/per-boot/lni-setup.sh
       /var/lib/cloud/scripts/per-boot/lni-setup.sh
@@ -264,6 +268,7 @@ module "vpc" {
   }
 
   tags = local.tags
+
 }
 
 # Required for Outposts Servers to enable LNI behavior per https://docs.aws.amazon.com/outposts/latest/server-userguide/local-network-interface.html#enable-lni
@@ -279,13 +284,8 @@ resource "null_resource" "update_kubeconfig" {
   }
 }
 
-# yaml sources
-# https://raw.githubusercontent.com/metallb/metallb/v0.13.9/config/manifests/metallb-native.yaml
-# https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/master/config/multus/v3.9.2-eksbuild.1/aws-k8s-multus.yaml
-# https://github.com/k8snetworkplumbingwg/reference-deployment/blob/master/multus-dhcp/dhcp-daemonset.yml
-
 data "kubectl_path_documents" "multus" {
-    pattern = "./manifests/aws-k8s-multus.yaml"
+    pattern = "./manifests/aws-k8s-multus.yaml" # https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/master/config/multus/v3.9.2-eksbuild.1/aws-k8s-multus.yaml
 }
 resource "kubectl_manifest" "multus_manifests" {
     depends_on = [ module.eks ]  
@@ -294,7 +294,7 @@ resource "kubectl_manifest" "multus_manifests" {
 }
 
 data "kubectl_path_documents" "metallb" {
-    pattern = "./manifests/metallb-native.yaml"
+    pattern = "./manifests/metallb-native.yaml"  # https://raw.githubusercontent.com/metallb/metallb/v0.13.9/config/manifests/metallb-native.yaml
 }
 resource "kubectl_manifest" "metallb_manifests" {
     depends_on = [ module.eks ]  
@@ -321,7 +321,7 @@ resource "kubectl_manifest" "metallb_pool_manifests" {
 }
 
 data "kubectl_path_documents" "dhcp" {
-    pattern = "./manifests/dhcp-daemonset.yml"
+    pattern = "./manifests/dhcp-daemonset.yml" # https://raw.githubusercontent.com/k8snetworkplumbingwg/reference-deployment/master/multus-dhcp/dhcp-daemonset.yml
 }
 resource "kubectl_manifest" "dhcp_manifests" {
     depends_on = [ kubectl_manifest.lni_manifests ]  
