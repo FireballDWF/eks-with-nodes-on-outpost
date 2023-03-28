@@ -1,3 +1,4 @@
+# Have not found a good way to parameterize values with the config blocks
 ---
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
@@ -61,11 +62,11 @@ spec:
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
-  name: lni-ipvlan-3
+  name: lni-ipvlan-dhcp
 spec:
   config: '{
       "cniVersion": "0.3.1",
-      "name": "lni-ipvlan-3",
+      "name": "lni-ipvlan-dhcp",
       "type": "ipvlan",
       "mode": "l2",
       "master": "eth1",
@@ -73,7 +74,6 @@ spec:
         "type": "dhcp"
       }
     }'
-
 
 ---
 apiVersion: "k8s.cni.cncf.io/v1"
@@ -88,50 +88,11 @@ spec:
         {
           "type": "ipvlan",
           "master": "eth1",
-          "mode": "l3",
-          "ipam": {
-            "type": "host-local",
-            "subnet": "192.168.0.0/22",
-            "rangeStart": "192.168.2.172",
-            "rangeEnd": "192.168.2.174",
-            "routes": [
-              { "dst": "192.168.0.0/22" }
-            ],
-            "gateway": "192.168.1.1"
-          }
-        }
-      ]
-    }'
-
-
-
----
-apiVersion: "k8s.cni.cncf.io/v1"
-kind: NetworkAttachmentDefinition
-metadata:
-  name: lni-ipvlan-5
-  namespace: kube-system
-spec:
-  config: '{
-      "cniVersion": "0.3.1",
-      "name": "lni-ipvlan-5",
-      "plugins": [
-        {
-          "type": "ipvlan",
-          "master": "eth1",
           "mode": "l2",
           "ipam": {
-            "type": "host-local",
-            "subnet": "192.168.0.0/22",
-            "rangeStart": "192.168.2.175",
-            "rangeEnd": "192.168.2.177",
-            "routes": [
-              { "dst": "192.168.0.0/22" }
-            ],
-            "gateway": "192.168.1.1"
+            "type": "whereabouts",
+            "range": "192.168.2.172/30"
           }
         }
       ]
     }'
-
-

@@ -33,7 +33,7 @@ provider "kubectl" {
 data "aws_ec2_managed_prefix_list" "allow_cluster_endpoint_access" {
   filter {
     name   = "prefix-list-id"
-    values = ["pl-08dfb5b75e612d050"]
+    values = [ local.cluster_endpoint_access ]
   }
 }
 
@@ -47,9 +47,11 @@ module "eks" {
   cluster_name    = local.name
   cluster_version = local.cluster_version
 
-  cluster_endpoint_public_access  = true
+  cluster_endpoint_public_access  = true   # set to false if all k8s cluster endpoint access is from the VPC.
   cluster_endpoint_private_access = true
-  cluster_endpoint_public_access_cidrs = flatten(data.aws_ec2_managed_prefix_list.allow_cluster_endpoint_access.entries[*].cidr)    #TODO: determine if can use prefix list, or at least restrict to my ISP
+
+  cluster_endpoint_public_access_cidrs = flatten(data.aws_ec2_managed_prefix_list.allow_cluster_endpoint_access.entries[*].cidr)    
+  # If not willing to use Prefix Lists, then can specify cidr directly, just please don't use 0.0.0.0/0
 
   vpc_id     = module.vpc.vpc_id
   control_plane_subnet_ids = module.vpc.public_subnets
@@ -327,12 +329,23 @@ resource "kubectl_manifest" "metallb_pool_manifests" {
     yaml_body = each.value
 }
 
-data "kubectl_path_documents" "dhcp" {
-    pattern = "./manifests/dhcp-daemonset.yml" # https://raw.githubusercontent.com/k8snetworkplumbingwg/reference-deployment/master/multus-dhcp/dhcp-daemonset.yml
+# commended out dhcp until have time to troubleshoot
+#data "kubectl_path_documents" "dhcp" {
+#    pattern = "./manifests/dhcp-daemonset.yml" # https://raw.githubusercontent.com/k8snetworkplumbingwg/reference-deployment/master/multus-dhcp/dhcp-daemonset.yml
+#}
+#resource "kubectl_manifest" "dhcp_manifests" {
+#    depends_on = [ kubectl_manifest.lni_manifests ]  
+#    for_each  = toset(data.kubectl_path_documents.dhcp.documents)
+#    yaml_body = each.value
+#}
+
+data "kubectl_path_documents" "whereabouts" {
+    pattern = "./manifests/whereabouts/doc/crds/*.yaml"
 }
-resource "kubectl_manifest" "dhcp_manifests" {
-    depends_on = [ kubectl_manifest.lni_manifests ]  
-    for_each  = toset(data.kubectl_path_documents.dhcp.documents)
+
+resource "kubectl_manifest" "whereabouts_manifests" {
+    depends_on = [ kubectl_manifest.multus_manifests ]  
+    for_each  = toset(data.kubectl_path_documents.whereabouts.documents)
     yaml_body = each.value
 }
 
@@ -341,7 +354,7 @@ data "kubectl_path_documents" "nginx" {
 }
 
 resource "kubectl_manifest" "nginx_manifests" {
-    depends_on = [ kubectl_manifest.metallb_pool_manifests, kubectl_manifest.dhcp_manifests ]  
+    depends_on = [ kubectl_manifest.metallb_pool_manifests, kubectl_manifest.lni_manifests ]  
     for_each  = toset(data.kubectl_path_documents.nginx.documents)
     yaml_body = each.value
 }

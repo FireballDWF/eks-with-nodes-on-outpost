@@ -19,46 +19,7 @@ spec:
               "-c",
               "apt update -y; apt install -y net-tools iputils-ping arping curl",
             ]
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: lni-al2023
-  #annotations:
-  #  k8s.v1.cni.cncf.io/networks: lni-ipvlan-3
-spec:
-  #hostNetwork: true
-  containers:
-  - name: lni-al2023
-    command: ["/bin/bash", "-c", "trap : TERM INT; sleep infinity & wait"]
-    image: public.ecr.aws/amazonlinux/amazonlinux:2023
-    lifecycle:
-      postStart:
-        exec:
-          command:
-            [
-              "/bin/sh",
-              "-c",
-              "dnf install -y iproute iputils",
-            ]
-    volumeMounts:
-      - name: socketpath
-        mountPath: /run/cni
-      - name: procpath
-        mountPath: /proc
-      - name: netnspath
-        mountPath: /var/run/netns
-        mountPropagation: HostToContainer
-  volumes:
-    - name: socketpath
-      hostPath:
-        path: /run/cni
-    - name: procpath
-      hostPath:
-        path: /proc
-    - name: netnspath
-      hostPath:
-        path: /run/netns
+
 ---
 apiVersion: v1
 kind: Pod
@@ -67,7 +28,6 @@ metadata:
   annotations:
     k8s.v1.cni.cncf.io/networks: lni-ipvlan-4
 spec:
-  #hostNetwork: true
   containers:
   - name: lni-al2023-nodhcp
     command: ["/bin/bash", "-c", "trap : TERM INT; sleep infinity & wait"]
@@ -81,4 +41,3 @@ spec:
               "-c",
               "dnf install -y iproute iputils",
             ]
----
