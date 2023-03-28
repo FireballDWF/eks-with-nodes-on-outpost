@@ -4,7 +4,7 @@
 EKS on Outposts currently is only *supported* on the Racks form factor, thus running on the Servers form factor is not currently officially *supported*.  However, this repo shows a specific example where the cluster can be created with worker nodes running on the Outposts Server, however this configuration is *not currently supported*, but doesn't mean it doesn't actually work...
 
 ## Limitations (Known)
-1. This example is based the deployment option known as [Extended Clusters](https://docs.aws.amazon.com/eks/latest/userguide/eks-outposts.html#outposts-overview-comparing-deployment-options) where the kubernetes control plane nodes run in the region, thus not on the Outposts Servers.  The "Local Clusters" deployment option is currently not available due to [Outposts Servers requiring AMIs to be composed of only a single snapshot](https://docs.aws.amazon.com/outposts/latest/server-userguide/launch-instance.html#launch-instances) combined with fact that EKS Control Plane nodes are implemented using the [Bottlerocket](https://aws.amazon.com/bottlerocket/faqs/) AMI, which currently is composed of two snapshots.  (To see this for yourself, deploy EKS Local Clusters to an Outposts Rack, observe the new EC2 instances that get created, then describe one of those new instances to see the AMIid, then describe the AMI to see the composition of the snapshots)
+1. This example is based the deployment option known as [Extended Clusters](https://docs.aws.amazon.com/eks/latest/userguide/eks-outposts.html#outposts-overview-comparing-deployment-options) where the kubernetes control plane nodes run in the region, thus not on the Outposts Servers.  The [Local Clusters](https://aws.amazon.com/blogs/containers/amazon-eks-on-aws-outposts-now-supports-local-clusters/) deployment option is currently not available due to [Outposts Servers requiring AMIs to be composed of only a single snapshot](https://docs.aws.amazon.com/outposts/latest/server-userguide/launch-instance.html#launch-instances) combined with fact that EKS Control Plane nodes are implemented using the [Bottlerocket](https://aws.amazon.com/bottlerocket/faqs/) AMI, which currently is composed of two snapshots.  (To see this for yourself, deploy EKS Local Clusters to an Outposts Rack, observe the new EC2 instances that get created, then describe one of those new instances to see the AMIid, then describe the AMI to see the composition of the snapshots)
 
 2. Nodes in your Node Groups are subject to the same AMI limitations referenced above, thus can't use Bottlerocket or any other AMI composed of more than 1 snapshot.  This example currently uses an EKS-Optimized AmazonLinux2 AMI
 
@@ -56,6 +56,6 @@ Medium:
         1. kubectl get nodes -o wide
         2. kubectl get service -o wide 
         3. from both worker nodes
-        4. aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names filiatra-eks-outpost-tf-20230309033512377400000003  --output text --query 'AutoScalingGroups[0].Instances[*].InstanceId' 
+        4. aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names filiatra-eks-outpost-tf-2023032417415967300000000b  --output text --query 'AutoScalingGroups[0].Instances[*].InstanceId' 
         5. kubectl get all -n metallb-system -o wide
         6. kubectl get ns  

@@ -136,6 +136,11 @@ module "eks" {
       rolearn = data.aws_caller_identity.current.arn
       username = "role1"
       groups = ["system:masters"]
+    },
+    { 
+      rolearn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/Admin"
+      username = "role2"
+      groups = ["system:masters"]
     }
   ]
 
@@ -316,7 +321,7 @@ resource "kubectl_manifest" "metallb_pool_manifests" {
 }
 
 data "kubectl_path_documents" "dhcp" {
-    pattern = "./manifests/metallb-l2-pool.yaml"
+    pattern = "./manifests/dhcp-daemonset.yml"
 }
 resource "kubectl_manifest" "dhcp_manifests" {
     depends_on = [ kubectl_manifest.lni_manifests ]  
