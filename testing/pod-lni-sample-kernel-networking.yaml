@@ -4,7 +4,7 @@ kind: Pod
 metadata:
   name: lni-sample-kernel-networking
   annotations:
-    k8s.v1.cni.cncf.io/networks: lni-ipvlan-2
+    k8s.v1.cni.cncf.io/networks: lni-ipvlan-whereabouts
 spec:
   containers:
   - name: ubuntu
@@ -26,7 +26,7 @@ kind: Pod
 metadata:
   name: lni-al2023-nodhcp
   annotations:
-    k8s.v1.cni.cncf.io/networks: lni-ipvlan-4
+    k8s.v1.cni.cncf.io/networks: lni-ipvlan-whereabouts
 spec:
   containers:
   - name: lni-al2023-nodhcp

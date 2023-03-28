@@ -340,7 +340,7 @@ resource "kubectl_manifest" "metallb_pool_manifests" {
 #}
 
 data "kubectl_path_documents" "whereabouts" {
-    pattern = "./manifests/whereabouts/doc/crds/*.yaml"
+    pattern = "./manifests/whereabouts/doc/crds/*.yaml" # git clone https://github.com/k8snetworkplumbingwg/whereabouts
 }
 
 resource "kubectl_manifest" "whereabouts_manifests" {
