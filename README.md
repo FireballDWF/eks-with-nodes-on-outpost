@@ -1,3 +1,6 @@
+I've stopped using this repo, however development continues elsewhere, if you like what you see and want to see even more, contact me.
+----------------------
+
 # EKS Extended Cluster on Outposts Servers
 
 ## WARNING:
